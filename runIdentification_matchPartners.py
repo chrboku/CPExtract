@@ -111,12 +111,12 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
 
     #### for testing only. labellingElement is overwritten with a new object (Bunch)
     labelingElements={}
-    labelingElements[labellingElement]=Bunch(nativeIsotope="12C", labelingIsotope="13C", massNative=0      , massLabeled=0+xOffset , isotopicEnrichmentNative=purityN, isotopicEnrichmentLabeled=purityL, minXn=xMin, maxXn=xMax)
-    #labelingElements["C"]=Bunch(nativeIsotope="12C", labelingIsotope="13C", massNative=12.      , massLabeled=13.00335 , isotopicEnrichmentNative=0.9893, isotopicEnrichmentLabeled=0.995, minXn=3, maxXn=70)
-    #labelingElements["H"]=Bunch(nativeIsotope= "1H", labelingIsotope= "2H", massNative=1.0078250, massLabeled=2.0141018, isotopicEnrichmentNative=0.9999, isotopicEnrichmentLabeled=0.96 , minXn=1, maxXn=3)
+    #labelingElements[labellingElement]=Bunch(nativeIsotope="12C", labelingIsotope="13C", massNative=0      , massLabeled=0+xOffset , isotopicEnrichmentNative=purityN, isotopicEnrichmentLabeled=purityL, minXn=xMin, maxXn=xMax)
+    labelingElements["C"]=Bunch(nativeIsotope="12C", labelingIsotope="13C", massNative=12.      , massLabeled=13.00335 , isotopicEnrichmentNative=0.9893, isotopicEnrichmentLabeled=0.995, minXn=1, maxXn=2)
+    labelingElements["H"]=Bunch(nativeIsotope= "1H", labelingIsotope= "2H", massNative=1.0078250, massLabeled=2.0141018, isotopicEnrichmentNative=0.9999, isotopicEnrichmentLabeled=0.96 , minXn=1, maxXn=3)
 
-    minLabelingAtoms=xMin
-    maxLabelingAtoms=xMax
+    minLabelingAtoms=3
+    maxLabelingAtoms=5
 
 
     ## substitution arrays for checking the number of carbon atoms
@@ -126,7 +126,8 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
         b.purityLArray = getSubstitutionArray(b.isotopicEnrichmentLabeled, b.maxXn + 3, maxSub)   # labelled metabolite
 
     ## combinations of labeling elements
-    combs=getCombinationsOfLabel([labellingElement], labelingElements, minLabelingAtoms, maxLabelingAtoms)
+    combs=getCombinationsOfLabel(["C", "H"], labelingElements, minLabelingAtoms, maxLabelingAtoms)
+
 
     # iterate over all MS scans (lvl. 1)
     curScanIndex=0
@@ -394,7 +395,7 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
 
                                                 for comb in combs:
                                                     # find corresponding M' peak
-                                                    isoM_pX = curScan.findMZ(curPeakmz + comb.mzdelta/curLoading, ppm, start=currentPeakIndex)
+                                                    isoM_pX = curScan.findMZ(curPeakmz + comb.mzdelta / curLoading, ppm, start=currentPeakIndex)
                                                     isoM_pX = curScan.getMostIntensePeak(isoM_pX[0], isoM_pX[1], intensityThres)
                                                     if isoM_pX != -1:
 
@@ -414,7 +415,7 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
                                                             curPeakDetectedIonPairs.append(
                                                                 mzFeature(mz=curPeakmz,
                                                                           lmz=curScan.mz_list[isoM_pX],
-                                                                          deltamzTheoretical=comb.mzdelta/curLoading,
+                                                                          deltamzTheoretical=comb.mzdelta / curLoading,
                                                                           xCount=fT.flatToString(comb.atoms),
                                                                           ratioNative=0,
                                                                           ratioLabeled=0,
@@ -482,7 +483,7 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
                                                         curPeakDetectedIonPairs.append(
                                                             mzFeature(mz=curPeakmz,
                                                                       lmz=curScan.mz_list[isoM_pX],
-                                                                      deltamzTheoretical=comb.mzdelta/curLoading,
+                                                                      deltamzTheoretical=comb.mzdelta / curLoading,
                                                                       xCount=fT.flatToString(comb.atoms),
                                                                       ratioNative=normRatioN,
                                                                       ratioLabeled=normRatioL,
