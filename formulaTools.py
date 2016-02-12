@@ -199,6 +199,11 @@ class formulaTools:
     def parseFormula(self, formula):
         return self._parseStruct("(" + formula.replace(" ", "") + ")", 0)[1]
 
+
+    def getTotalNumberOfAtoms(self, formula):
+        elems=self.parseFormula(formula)
+        return sum([v for k,v in elems.items()])
+
     # method determines if a given element represent an isotope other the the main isotope of a given element
     # e.g. isIso("13C"): True; isIso("12C"): False
     def isIso(self, iso):

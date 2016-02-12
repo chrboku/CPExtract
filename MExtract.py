@@ -2168,7 +2168,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 try:
                     #Group results
                     procProc = FuncProcess(_target=bracketResults,
-                                            indGroups=indGroups, minX=self.ui.minXCount.value(), maxX=self.ui.maxXCount.value(),
+                                            indGroups=indGroups,
                                             groupSizePPM=self.ui.groupPpm.value(),
                                             maxTimeDeviation=self.ui.groupingRT.value() * 60.,
                                             maxLoading=self.ui.maxLoading.value(),
@@ -2344,8 +2344,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             f = f.replace("\\", "/")
                             fDict[f] = f[(f.rfind("/") + 1):max(f.lower().rfind(".mzxml"), f.lower().rfind(".mzml"))]
 
-                    integrateResultsFile(str(self.ui.groupsSave.text()), str(self.ui.groupsSave.text()), fDict, "MZ",
-                                         "RT", "Xn", "Charge", "L_MZ", "Ionisation_Mode", "Num",
+                    integrateResultsFile(str(self.ui.groupsSave.text()), str(self.ui.groupsSave.text()), fDict,
+                                         "MZ", "RT", "Xn", "Charge", "L_MZ", "Ionisation_Mode", "Num",
                                          ppm=self.ui.groupPpm.value(),
                                          maxRTShift=self.ui.integrationMaxTimeDifference.value(),
                                          scales=[self.ui.wavelet_minScale.value(), self.ui.wavelet_maxScale.value()],
@@ -2526,7 +2526,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             count = 0
             children=[]
-            for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT chromPeaks.id AS cpID, mz, xcount, NPeakCenterMin, LPeakCenterMin, NPeakCenter, NPeakScale, eicID, LPeakScale, peaksCorr, peaksRatio, LPeakCenter, LPeakScale, Loading, heteroAtoms, name AS tracerName, adducts, heteroAtoms, chromPeaks.ionMode AS ionMode, assignedName, NBorderLeft, NBorderRight, LBorderLeft, LBorderRight, chromPeaks.massSpectrumID AS massSpectrumID FROM chromPeaks LEFT JOIN tracerConfiguration ON tracerConfiguration.id=chromPeaks.tracer ORDER BY tracerConfiguration.id, NPeakCenter, mz, xcount"):
+            for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT chromPeaks.id AS cpID, mz, lmz, xcount, deltamzTheoretical, ratioNative, ratioLabeled, NPeakCenterMin, LPeakCenterMin, NPeakCenter, NPeakScale, eicID, LPeakScale, peaksCorr, peaksRatio, LPeakCenter, LPeakScale, Loading, heteroAtoms, name AS tracerName, adducts, heteroAtoms, chromPeaks.ionMode AS ionMode, assignedName, NBorderLeft, NBorderRight, LBorderLeft, LBorderRight, chromPeaks.massSpectrumID AS massSpectrumID FROM chromPeaks LEFT JOIN tracerConfiguration ON tracerConfiguration.id=chromPeaks.tracer ORDER BY tracerConfiguration.id, NPeakCenter, mz, xcount"):
                 adducts = ""
                 lk = loads(base64.b64decode(row.adducts))
                 if len(lk) > 0:
@@ -2543,7 +2543,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                            str(row.tracerName), "%.3f"%(row.peaksRatio)])
 
                 xp = ChromPeakPair(NPeakCenter=int(row.NPeakCenter), LPeakScale=float(row.LPeakScale), LPeakCenter=int(row.LPeakCenter),
-                               NPeakScale=float(row.NPeakScale), NSNR=0, NPeakArea=-1, mz=float(row.mz), xCount=int(row.xcount),
+                               NPeakScale=float(row.NPeakScale), NSNR=0, NPeakArea=-1,
+                               mz=float(row.mz), lmz=float(row.lmz), deltamzTheoretical=float(row.deltamzTheoretical), xCount=str(row.xcount),
+                               ratioNative=float(row.ratioNative), ratioLabeled=float(row.ratioLabeled),
                                NBorderLeft=float(row.NBorderLeft), NBorderRight=float(row.NBorderRight),
                                LBorderLeft=float(row.LBorderLeft), LBorderRight=float(row.LBorderRight),
                                NPeakCenterMin=float(row.NPeakCenterMin), LPeakCenterMin=float(row.LPeakCenterMin), eicID=int(row.eicID), massSpectrumID=int(row.massSpectrumID),
@@ -2568,7 +2570,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             fGs = []
 
             children=[]
-            for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "select featureGroups.id as fgID, featureName as featureName, name as tracerName from featureGroups inner join tracerConfiguration on featureGroups.tracer=tracerConfiguration.id order by tracerConfiguration.id, featureGroups.id"):
+            for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT featureGroups.id AS fgID, featureName AS featureName, name AS tracerName FROM featureGroups INNER JOIN tracerConfiguration ON featureGroups.tracer=tracerConfiguration.id ORDER BY tracerConfiguration.id, featureGroups.id"):
                 fGs.append(row)
             for fG in fGs:
 
@@ -2579,31 +2581,35 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 d.setExpanded(True)
                 cpCount = 0
                 sumRt = 0.
-                for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "select c.id as cpID"
-                                                                               ", c.mz as mz"
-                                                                               ", c.xcount as xcount"
-                                                                               ", c.NPeakCenterMin as NPeakCenterMin"
-                                                                               ", c.LPeakCenterMin as LPeakCenterMin"
-                                                                               ", c.NPeakCenter as NPeakCenter"
-                                                                               ", c.NPeakScale as NPeakScale"
-                                                                               ", c.NBorderLeft as NBorderLeft"
-                                                                               ", c.NBorderRight as NBorderRight"
-                                                                               ", c.LBorderLeft as LBorderLeft"
-                                                                               ", c.LBorderRight as LBorderRight"
-                                                                               ", c.eicID as eicID"
-                                                                               ", f.fDesc as fDesc"
-                                                                               ", c.LPeakScale as LPeakScale"
-                                                                               ", c.LPeakCenter as LPeakCenter"
-                                                                               ", c.peaksCorr as peaksCorr"
-                                                                               ", c.peaksRatio as peaksRatio"
-                                                                               ", c.Loading as Loading"
-                                                                               ", t.name as tracerName"
-                                                                               ", adducts as adducts"
-                                                                               ", heteroAtoms as heteroAtoms"
-                                                                               ", c.assignedName as assignedName"
-                                                                               ", c.ionMode as ionMode"
-                                                                               ", c.massSpectrumID as massSpectrumID "
-                                                                               "from chromPeaks c join featureGroupFeatures f on c.id==f.fID inner join tracerConfiguration t on t.id=c.tracer where f.fGroupID=%d order by c.mz, c.xcount" %
+                for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT c.id AS cpID"
+                                                                               ", c.mz AS mz"
+                                                                               ", c.lmz AS lmz"
+                                                                               ", c.deltamzTheoretical AS deltamzTheoretical"
+                                                                               ", c.xcount AS xcount"
+                                                                               ", c.ratioNative AS ratioNative"
+                                                                               ", c.ratioLabeled AS ratioLabeled"
+                                                                               ", c.NPeakCenterMin AS NPeakCenterMin"
+                                                                               ", c.LPeakCenterMin AS LPeakCenterMin"
+                                                                               ", c.NPeakCenter AS NPeakCenter"
+                                                                               ", c.NPeakScale AS NPeakScale"
+                                                                               ", c.NBorderLeft AS NBorderLeft"
+                                                                               ", c.NBorderRight AS NBorderRight"
+                                                                               ", c.LBorderLeft AS LBorderLeft"
+                                                                               ", c.LBorderRight AS LBorderRight"
+                                                                               ", c.eicID AS eicID"
+                                                                               ", f.fDesc AS fDesc"
+                                                                               ", c.LPeakScale AS LPeakScale"
+                                                                               ", c.LPeakCenter AS LPeakCenter"
+                                                                               ", c.peaksCorr AS peaksCorr"
+                                                                               ", c.peaksRatio AS peaksRatio"
+                                                                               ", c.Loading AS Loading"
+                                                                               ", t.name AS tracerName"
+                                                                               ", adducts AS adducts"
+                                                                               ", heteroAtoms AS heteroAtoms"
+                                                                               ", c.assignedName AS assignedName"
+                                                                               ", c.ionMode AS ionMode"
+                                                                               ", c.massSpectrumID AS massSpectrumID "
+                                                                               "FROM chromPeaks c JOIN featureGroupFeatures f ON c.id==f.fID INNER JOIN tracerConfiguration t ON t.id=c.tracer WHERE f.fGroupID=%d ORDER BY c.mz, c.xcount" %
                                 fG.fgID):
 
                     adducts = ""
@@ -2618,7 +2624,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                     xp = ChromPeakPair(NPeakCenter=int(row.NPeakCenter), loading=int(row.Loading), LPeakScale=float(row.LPeakScale),
                                    LPeakCenter=int(row.LPeakCenter), NPeakScale=float(row.NPeakScale), NSNR=0, NPeakArea=-1,
-                                   mz=float(row.mz), xCount=int(row.xcount), NPeakCenterMin=float(row.NPeakCenterMin),
+                                   mz=float(row.mz), lmz=float(row.lmz), deltamzTheoretical=float(row.deltamzTheoretical), xCount=str(row.xcount),
+                                   ratioNative=float(row.ratioNative), ratioLabeled=float(row.ratioLabeled),
+                                   NPeakCenterMin=float(row.NPeakCenterMin),
                                    NBorderLeft=float(row.NBorderLeft), NBorderRight=float(row.NBorderRight),
                                    LBorderLeft=float(row.LBorderLeft), LBorderRight=float(row.LBorderRight),
                                    LPeakCenterMin=float(row.LPeakCenterMin), eicID=int(row.eicID), massSpectrumID=int(row.massSpectrumID),
@@ -3175,7 +3183,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     times = []
                     maxE=1
                     for row in self.currentOpenResultsFile.curs.execute(
-                                    "select xic, xicL, xicfirstiso, xicLfirstiso, xicLfirstisoconjugate , times from XICs where id==%d" % cp.eicID):
+                                    "SELECT xic, xicL, xicfirstiso, xicLfirstiso, xicLfirstisoconjugate , times FROM XICs WHERE id==%d" % cp.eicID):
                         xic = [float(t) for t in row[0].split(";")]
                         xicL = [-float(t) for t in row[1].split(";")]
                         xicfirstiso = [float(t) for t in row[2].split(";")]
@@ -3245,7 +3253,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     self.drawPlot(self.ui.pl1, plotIndex=0, x=times, y=xic,
                                   fill=[int(cp.NPeakCenter - cp.NBorderLeft),
                                         int(cp.NPeakCenter + cp.NBorderRight)], rearrange=len(selectedItems) == 1,
-                                  label="%.4f (%d)"%(cp.mz, cp.xCount), useCol=useColi)
+                                  label="%.4f (%s)"%(cp.mz, cp.xCount), useCol=useColi)
 
 
                     if self.ui.showIsotopologues.isChecked():
@@ -3280,7 +3288,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                     toDrawMzs = []
                     toDrawInts = []
-                    for row in self.currentOpenResultsFile.curs.execute("select mzs, intensities, ionmode from massspectrum where mID=%d"%cp.massSpectrumID):
+                    for row in self.currentOpenResultsFile.curs.execute("SELECT mzs, intensities, ionmode FROM massspectrum WHERE mID=%d"%cp.massSpectrumID):
 
                         mzs = [float(t) for t in row[0].split(";")]
                         intensities = [float(t) for t in row[1].split(";")]
@@ -3303,7 +3311,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                     bm = min(range(len(toDrawMzs)), key=lambda i: abs(toDrawMzs[i] - cp.mz)) + 1
                     bml = min(range(len(toDrawMzs)),
-                              key=lambda i: abs(toDrawMzs[i] - (cp.mz + mzD * cp.xCount / cp.loading))) + 1
+                              key=lambda i: abs(toDrawMzs[i] - cp.lmz)) + 1
 
                     intLeft = toDrawInts[bm]
                     intRight = toDrawInts[bml]
@@ -3315,15 +3323,15 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                         h = max(intLeft, intRight)
 
                     if self.ui.MSLabels.checkState() == QtCore.Qt.Checked:
-                        self.addAnnotation(self.ui.pl3, "mz: %.5f\nl-mz: %.5f\nd-mz: %.5f\nXn: %d Z: %s%d" % (
-                            cp.mz, cp.mz + mzD * cp.xCount / cp.loading, mzD * cp.xCount, cp.xCount, cp.ionMode,
-                            cp.loading), (cp.mz + mzD * cp.xCount / cp.loading / 2., h), (10, 120), rotation=0,
+                        self.addAnnotation(self.ui.pl3, "mz: %.5f\nl-mz: %.5f\nd-mz: %.5f\n%s Z: %s%d" % (
+                            cp.mz, cp.lmz, cp.deltamzTheoretical, cp.xCount, cp.ionMode, cp.loading),
+                                ((cp.mz+cp.lmz)/2., h), (10, 120), rotation=0,
                                            up=not (cp.ionMode == "-" and featuresPosSelected))
 
                     self.addArrow(self.ui.pl3, (cp.mz, toDrawInts[bm]), (cp.mz, h), drawArrowHead=True)
-                    self.addArrow(self.ui.pl3, (cp.mz, h), (cp.mz + mzD * cp.xCount / cp.loading, h),
+                    self.addArrow(self.ui.pl3, (cp.mz, h), (cp.lmz, h),
                                   ecColor="firebrick")
-                    self.addArrow(self.ui.pl3, (cp.mz + mzD * cp.xCount / cp.loading, toDrawInts[bml]),(cp.mz + mzD * cp.xCount / cp.loading, h), drawArrowHead=True)
+                    self.addArrow(self.ui.pl3, (cp.lmz , toDrawInts[bml]),(cp.lmz, h), drawArrowHead=True)
 
                     annotationHeight=h
 
@@ -3340,9 +3348,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                       (cp.mz + 1.00335 / cp.loading, annotationHeight), drawArrowHead=True)
 
                         bm = min(range(len(toDrawMzs)),
-                                 key=lambda w: abs(toDrawMzs[w] - (cp.mz + 1.00335 * (cp.xCount - 1) / cp.loading))) + 1
+                                 key=lambda w: abs(toDrawMzs[w] - cp.lmz - 1.00335/ cp.loading)) + 1
                         bml = min(range(len(toDrawMzs)),
-                                  key=lambda w: abs(toDrawMzs[w] - (cp.mz + 1.00335 * cp.xCount / cp.loading))) + 1
+                                  key=lambda w: abs(toDrawMzs[w] - cp.lmz)) + 1
 
                         if cp.ionMode == "-" and featuresPosSelected:
                             h = min(toDrawInts[bm], toDrawInts[bml])
@@ -3350,21 +3358,20 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             h = max(toDrawInts[bm], toDrawInts[bml])
 
                         self.addArrow(self.ui.pl3,
-                                      (cp.mz + 1.00335 * (cp.xCount - 1) / cp.loading, toDrawInts[bm]),
-                                      (cp.mz + 1.00335 * (cp.xCount - 1) / cp.loading, annotationHeight), drawArrowHead=True)
+                                      (cp.lmz - 1.00335 / cp.loading, toDrawInts[bm]),
+                                      (cp.lmz - 1.00335 / cp.loading, annotationHeight), drawArrowHead=True)
 
 
                         self.addArrow(self.ui.pl3, (cp.mz, 0), (cp.mz, intLeft), linewidth=5, ecColor="orange")
-                        self.addArrow(self.ui.pl3, (cp.mz + 1.00335 * cp.xCount / cp.loading, 0),
-                                      (cp.mz + 1.00335 * cp.xCount / cp.loading, intRight), linewidth=5,
-                                      ecColor="orange")
+                        self.addArrow(self.ui.pl3, (cp.lmz, 0), (cp.lmz, intRight), linewidth=5, ecColor="orange")
 
                         intErrN, intErrL = self.getAllowedIsotopeRatioErrorsForResult()
 
 
                         for iso in [1, 2, 3]:
-                            ratioN = getNormRatio(purN, cp.xCount, iso)
-                            ratioL = getNormRatio(purL, cp.xCount, iso)
+                            ratioN = pow(cp.ratioNative, iso)
+                            ratioL = pow(cp.ratioLabeled, iso)
+
                             self.addArrow(self.ui.pl3, (cp.mz + (1.00335 * iso) / cp.loading, 0), (
                             cp.mz + (1.00335 * iso) / cp.loading, intLeft * max(0, (ratioN - intErrN))),
                                           linewidth=5, alpha=.1, ecColor="orange")
@@ -3379,18 +3386,18 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                           intLeft * max(0, (ratioN + .005))), linewidth=5, alpha=.1,
                                           ecColor="yellow")
 
-                            self.addArrow(self.ui.pl3, (cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading, 0), (
-                                cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
+                            self.addArrow(self.ui.pl3, (cp.lmz - 1.00335 * iso / cp.loading, 0), (
+                                cp.lmz - 1.00335 * iso / cp.loading,
                                 intRight * max(0, (ratioL - intErrL))), linewidth=5, alpha=.1,
                                           ecColor="orange")
-                            self.addArrow(self.ui.pl3, (cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
+                            self.addArrow(self.ui.pl3, (cp.lmz - 1.00335 * iso / cp.loading,
                                                         intRight * max(0, (ratioL - intErrL))), (
-                                              cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
+                                              cp.lmz - 1.00335 * iso / cp.loading,
                                               intRight * (ratioL + intErrL)), linewidth=5, alpha=.1,
                                           ecColor="DarkSeaGreen")
-                            self.addArrow(self.ui.pl3, (cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
+                            self.addArrow(self.ui.pl3, (cp.lmz - 1.00335 * iso / cp.loading,
                                                         intRight * max(0, (ratioL - .005))), (
-                                              cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
+                                              cp.lmz - 1.00335 * iso / cp.loading,
                                               intRight * max(0, (ratioL + .005))), linewidth=5,
                                           alpha=.1, ecColor="yellow")
 
@@ -3399,8 +3406,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                 self.addArrow(self.ui.pl3, (cp.mz - (1.00335 * iso) / cp.loading, 0),
                                               (cp.mz - (1.00335 * iso) / cp.loading, intLeft * .1), linewidth=5,
                                               ecColor="yellow")
-                                self.addArrow(self.ui.pl3, (cp.mz + 1.00335 * (cp.xCount + iso) / cp.loading, 0),
-                                              (cp.mz + 1.00335 * (cp.xCount + iso) / cp.loading, intRight * .1),
+                                self.addArrow(self.ui.pl3, (cp.lmz + 1.00335 * iso / cp.loading, 0),
+                                              (cp.lmz + 1.00335 * iso / cp.loading, intRight * .1),
                                               linewidth=5, ecColor="yellow")
 
                             self.addArrow(self.ui.pl3, (cp.mz - 1.00335 / (cp.loading * 2), 0),
@@ -3410,13 +3417,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                           (cp.mz + 1.00335 / (cp.loading * 2), intLeft * .05), linewidth=5,
                                           ecColor="yellow")
                             self.addArrow(self.ui.pl3, (
-                                cp.mz + 1.00335 * cp.xCount / cp.loading + 1.00335 / (cp.loading * 2), 0), (
-                                              cp.mz + 1.00335 * cp.xCount / cp.loading + 1.00335 / (cp.loading * 2),
+                                cp.lmz + 1.00335 / (cp.loading * 2), 0), (
+                                              cp.lmz + 1.00335 / (cp.loading * 2),
                                               intRight * .05), linewidth=5, ecColor="yellow")
                             self.addArrow(self.ui.pl3, (
-                                cp.mz + 1.00335 * cp.xCount / cp.loading - 1.00335 / (cp.loading * 2), 0), (
-                                              cp.mz + 1.00335 * cp.xCount / cp.loading - 1.00335 / (cp.loading * 2),
+                                cp.lmz - 1.00335 / (cp.loading * 2), 0), (
+                                              cp.lmz  - 1.00335 / (cp.loading * 2),
                                               intRight * .05), linewidth=5, ecColor="yellow")
+
                 useColi += 1
             #</editor-fold>
 
@@ -3473,7 +3481,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     mstime = {}
 
                     try:
-                        for msspectrum in SQLSelectAsObject(self.currentOpenResultsFile.curs, "select mzs, intensities, time as tim, ionMode from massspectrum where fgID=%d" % item.myID):
+                        for msspectrum in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT mzs, intensities, time AS tim, ionMode FROM massspectrum WHERE fgID=%d" % item.myID):
                             msi += 1
                             ionMode = str(msspectrum.ionMode)
                             mzs[ionMode] = [float(u) for u in str(msspectrum.mzs).split(";")]
@@ -3550,8 +3558,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                 mzD, purN, purL = self.getLabellingParametersForResult(child.id)
 
                                 bm = min(range(len(toDrawMzs)), key=lambda i: abs(toDrawMzs[i] - child.mz)) + 1
-                                bml = min(range(len(toDrawMzs)), key=lambda i: abs(
-                                    toDrawMzs[i] - (child.mz + mzD * child.xCount / child.loading))) + 1
+                                bml = min(range(len(toDrawMzs)), key=lambda i: abs(toDrawMzs[i] - child.lmz)) + 1
 
                                 intLeft = toDrawInts[bm]
                                 intRight = toDrawInts[bml]
@@ -3561,21 +3568,16 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                 h = h
                                 if self.ui.MSLabels.checkState() == QtCore.Qt.Checked:
                                     self.addAnnotation(self.ui.pl3,
-                                                       "mz: %.5f\nl-mz: %.5f\nd-mz: %.5f\nXn: %d Z: %s%d" % (
-                                                           child.mz, child.mz + mzD * child.xCount / child.loading,
-                                                           mzD * child.xCount, child.xCount, child.ionMode,
-                                                           child.loading),
-                                                       (child.mz + mzD * child.xCount / child.loading / 2., h * intMul),
+                                                       "mz: %.5f\nl-mz: %.5f\nd-mz: %.5f\nXn: %s Z: %s%d" % (
+                                                           child.mz, child.lmz,child.deltamzTheoretical, child.xCount, child.ionMode,child.loading),
+                                                       ((child.mz + child.lmz) / 2., h * intMul),
                                                        (10, 120), rotation=0, offset=(-10, 20), up=intMul > 0)
 
                                 self.addArrow(self.ui.pl3, (child.mz, (toDrawInts[bm]) * intMul),
                                               (child.mz, h * intMul), drawArrowHead=True)
-                                self.addArrow(self.ui.pl3, (child.mz, h * intMul),
-                                              (child.mz + mzD * child.xCount / child.loading, h * intMul),
+                                self.addArrow(self.ui.pl3, (child.mz, h * intMul), (child.lmz, h * intMul),
                                               ecColor="firebrick")
-                                self.addArrow(self.ui.pl3, (
-                                child.mz + mzD * child.xCount / child.loading, (toDrawInts[bml]) * intMul),
-                                              (child.mz + mzD * child.xCount / child.loading, h * intMul),
+                                self.addArrow(self.ui.pl3, (child.lmz, (toDrawInts[bml]) * intMul),(child.lmz, h * intMul),
                                               drawArrowHead=True)
 
                                 if self.ui.MSIsos.checkState() == QtCore.Qt.Checked:
@@ -3589,50 +3591,49 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                   (child.mz + 1.00335 / child.loading, h * intMul), drawArrowHead=True)
 
                                     bm = min(range(len(toDrawMzs)), key=lambda i: abs(
-                                        toDrawMzs[i] - (child.mz + 1.00335 * (child.xCount - 1) / child.loading))) + 1
+                                        toDrawMzs[i] - (child.lmz - 1.00335 / child.loading))) + 1
                                     bml = min(range(len(toDrawMzs)), key=lambda i: abs(
-                                        toDrawMzs[i] - (child.mz + 1.00335 * child.xCount / child.loading))) + 1
+                                        toDrawMzs[i] - (child.lmz))) + 1
                                     h = max(toDrawInts[bm], toDrawInts[bml])
                                     self.addArrow(self.ui.pl3, (
-                                        child.mz + 1.00335 * (child.xCount - 1) / child.loading,
+                                        child.lmz - 1.00335  / child.loading,
                                         (toDrawInts[bm]) * intMul),
-                                                  (child.mz + 1.00335 * (child.xCount - 1) / child.loading, h * intMul),
+                                                  (child.lmz - 1.00335  / child.loading, h * intMul),
                                                   drawArrowHead=True)
                                     self.addArrow(self.ui.pl3,
-                                                  (child.mz + 1.00335 * (child.xCount - 1) / child.loading, h * intMul),
-                                                  (child.mz + 1.00335 * child.xCount / child.loading, h * intMul),
+                                                  (child.lmz - 1.00335 / child.loading, h * intMul),
+                                                  (child.lmz, h * intMul),
                                                   ecColor="firebrick")
 
                                     self.addArrow(self.ui.pl3, (child.mz, 0), (child.mz, intLeft * intMul), linewidth=5,
                                                   ecColor="orange")
-                                    self.addArrow(self.ui.pl3, (child.mz + 1.00335 * child.xCount / child.loading, 0), (
-                                    child.mz + 1.00335 * child.xCount / child.loading, intRight * intMul), linewidth=5,
+                                    self.addArrow(self.ui.pl3, (child.lmz, 0), ( child.lmz, intRight * intMul), linewidth=5,
                                                   ecColor="orange")
 
                                     intErrN, intErrL = self.getAllowedIsotopeRatioErrorsForResult()
 
                                     for iso in [1, 2, 3]:
-                                        ratioN = getNormRatio(purN, child.xCount, iso)
-                                        ratioL = getNormRatio(purL, child.xCount, iso)
+                                        ratioN = pow(child.ratioNative, iso)
+                                        ratioL = pow(child.ratioLabeled, iso)
+
+                                        self.addArrow(self.ui.pl3,
+                                                      (child.lmz - 1.00335 *iso  / child.loading, 0), (
+                                                child.lmz - 1.00335 * iso / child.loading,
+                                                intMul * intRight * max(0., (ratioL - intErrL))), linewidth=5, alpha=.1,
+                                                      ecColor="orange")
 
                                         self.addArrow(self.ui.pl3, (child.mz + (1.00335 * iso) / child.loading, 0), (
-                                        child.mz + (1.00335 * iso) / child.loading,
+                                                        child.mz + (1.00335 * iso) / child.loading,
                                         intMul * intLeft * max(0., (ratioN - intErrN))), linewidth=5, alpha=.1, ecColor="orange")
                                         self.addArrow(self.ui.pl3, (child.mz + (1.00335 * iso) / child.loading,
                                                                     intMul * intLeft * max(0., (ratioN - intErrN))), (
                                                       child.mz + (1.00335 * iso) / child.loading,
                                                       intMul * intLeft * (ratioN + intErrN)), linewidth=5, alpha=.1,
                                                       ecColor="DarkSeaGreen")
-
-                                        self.addArrow(self.ui.pl3,
-                                                      (child.mz + 1.00335 * (child.xCount - iso) / child.loading, 0), (
-                                                child.mz + 1.00335 * (child.xCount - iso) / child.loading,
-                                                intMul * intRight * max(0., (ratioL - intErrL))), linewidth=5, alpha=.1,
-                                                      ecColor="orange")
                                         self.addArrow(self.ui.pl3, (
-                                        child.mz + 1.00335 * (child.xCount - iso) / child.loading,
+                                        child.lmz - 1.00335 * iso / child.loading,
                                         intMul * intRight * max(0., (ratioL - intErrL))), (
-                                                          child.mz + 1.00335 * (child.xCount - iso) / child.loading,
+                                                          child.lmz - 1.00335 * iso / child.loading,
                                                           intMul * intRight * (ratioL + intErrL)), linewidth=5, alpha=.1,
                                                       ecColor="DarkSeaGreen")
 
@@ -3642,8 +3643,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                           (child.mz - (1.00335 * iso) / child.loading,
                                                            intLeft * .1 * intMul), linewidth=5, ecColor="yellow")
                                             self.addArrow(self.ui.pl3, (
-                                            child.mz + 1.00335 * (child.xCount + iso) / child.loading, 0), (
-                                                              child.mz + 1.00335 * (child.xCount + iso) / child.loading,
+                                            child.lmz + 1.00335 * iso / child.loading, 0), (
+                                                              child.lmz + 1.00335 * iso / child.loading,
                                                               intRight * .1 * intMul), linewidth=5, ecColor="yellow")
 
                                         self.addArrow(self.ui.pl3, (child.mz - 1.00335 / (child.loading * 2), 0), (
@@ -3653,16 +3654,12 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                         child.mz + 1.00335 / (child.loading * 2), intLeft * .05 * intMul), linewidth=5,
                                                       ecColor="yellow")
                                         self.addArrow(self.ui.pl3, (
-                                            child.mz + 1.00335 * child.xCount / child.loading + 1.00335 / (
-                                                child.loading * 2), 0), (
-                                                          child.mz + 1.00335 * child.xCount / child.loading + 1.00335 / (
-                                                              child.loading * 2), intRight * .05 * intMul), linewidth=5,
+                                            child.lmz + 1.00335 / (child.loading * 2), 0), (
+                                                          child.lmz  + 1.00335 / (child.loading * 2), intRight * .05 * intMul), linewidth=5,
                                                       ecColor="yellow")
                                         self.addArrow(self.ui.pl3, (
-                                            child.mz + 1.00335 * child.xCount / child.loading - 1.00335 / (
-                                                child.loading * 2), 0), (
-                                                          child.mz + 1.00335 * child.xCount / child.loading - 1.00335 / (
-                                                              child.loading * 2), intRight * .05 * intMul), linewidth=5,
+                                            child.lmz - 1.00335 / (child.loading * 2), 0), (
+                                                          child.lmz - 1.00335 / (child.loading * 2), intRight * .05 * intMul), linewidth=5,
                                                       ecColor="yellow")
 
                             childIDs.append(child.id)
@@ -3674,7 +3671,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             xicL = []
                             times = []
 
-                            for row in self.currentOpenResultsFile.curs.execute("select xic, xicL, xicfirstiso, xicLfirstiso, xicLfirstisoconjugate, times from XICs where id==%d" % child.eicID):
+                            for row in self.currentOpenResultsFile.curs.execute("SELECT xic, xicL, xicfirstiso, xicLfirstiso, xicLfirstisoconjugate, times FROM XICs WHERE id==%d" % child.eicID):
                                 xic = [float(t) for t in row[0].split(";")]
                                 xicL = [-float(t) for t in row[1].split(";")]
                                 xicfirstiso = [float(t) for t in row[2].split(";")]
@@ -3740,7 +3737,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                     int(child.NPeakCenter - child.NBorderLeft)),
                                 min(int(child.NPeakCenter + child.NBorderRight),
                                     int(child.LPeakCenter + child.LBorderRight))], rearrange=len(selectedItems) == 1,
-                                          label="%.4f (%d)"%(child.mz, child.xCount), useCol=useColi)  #useCol=selIndex*2)
+                                          label="%.4f (%s)"%(child.mz, child.xCount), useCol=useColi)  #useCol=selIndex*2)
                             if self.ui.showIsotopologues.isChecked():
                                 self.drawPlot(self.ui.pl1, plotIndex=0, x=times, y=xicfirstiso, fill=[
                                     max(int(child.LPeakCenter - child.LBorderLeft),
@@ -3791,7 +3788,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                         fRows = 0
                         minCorr = 1
-                        for row in self.currentOpenResultsFile.curs.execute("select key, value from config where key='minCorrelation'"):
+                        for row in self.currentOpenResultsFile.curs.execute("SELECT key, value FROM config WHERE key='minCorrelation'"):
                             fRows += 1
                             minCorr = float(row[1])
                         assert 0 < fRows <= 1, "Min Correlation not found or found multiple times in settings"
@@ -3810,14 +3807,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                         cIds = ",".join(["%d" % f for f in childIDs])
 
                         for row in self.currentOpenResultsFile.curs.execute(
-                                        "select c.id, c.mz, c.xcount, c.ionMode from chromPeaks c where c.id in (%s)" % (cIds)):
+                                        "SELECT c.id, c.mz, c.xcount, c.ionMode FROM chromPeaks c WHERE c.id in (%s)" % (cIds)):
                             id, mz, xcount, ionMode=row
 
                             fI1 = featureIDToColsNum[id]
-                            texts[fI1]="%s%.4f/%d"%(ionMode, mz, xcount)
+                            texts[fI1]="%s%.4f/%s"%(ionMode, mz, xcount)
 
                         for row in self.currentOpenResultsFile.curs.execute(
-                                        "select ff.fID1, ff.fID2, ff.corr from featurefeatures ff where ff.fID1 in (%s) and ff.fID2 in (%s)" % (
+                                        "SELECT ff.fID1, ff.fID2, ff.corr FROM featurefeatures ff WHERE ff.fID1 IN (%s) AND ff.fID2 IN (%s)" % (
                                         cIds, cIds)):
                             correlation = row[2]
 
@@ -4478,14 +4475,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                 if types[0] == "feature":
                     for item in selectedItems:
-                        clipboard.append("%f\t%.2f\t%d\t%d\t%s\t%s\t%s\t%s\t%s" % (
+                        clipboard.append("%f\t%.2f\t%s\t%d\t%s\t%s\t%s\t%s\t%s" % (
                             item.myData.mz, item.myData.NPeakCenterMin / 60., item.myData.xCount, item.myData.loading,
                             item.myData.ionMode, "-", item.myData.tracer, item.myData.adducts, item.myData.heteroAtoms))
                 if types[0] == "featureGroup":
                     for item in selectedItems:
                         for j in range(item.childCount()):
                             child = item.child(j)
-                            clipboard.append("%f\t%.2f\t%d\t%d\t%s\t%s\t%s\t%s\t%s" % (
+                            clipboard.append("%f\t%.2f\t%s\t%d\t%s\t%s\t%s\t%s\t%s" % (
                                 child.myData.mz, child.myData.NPeakCenterMin / 60., child.myData.xCount, child.myData.loading,
                                 child.myData.ionMode, item.myData.fgID, child.myData.tracer, child.myData.adducts, child.myData.heteroAtoms))
 

@@ -47,13 +47,11 @@ def _writeFirstPage(pdf, groupSizePPM, maxTimeDeviation, align, nPolynom):
 
 
 # store used configuration to DB file
-def writeConfigToDB(curs, align, file, groupSizePPM, maxLoading, maxTimeDeviation, maxX, minX, nPolynom,
+def writeConfigToDB(curs, align, file, groupSizePPM, maxLoading, maxTimeDeviation, nPolynom,
                     negativeScanEvent, positiveScanEvent, rVersion, meVersion):
     SQLInsert(curs, "config", key="MEVersion", value=str(meVersion))
     SQLInsert(curs, "config", key="RVersion", value=str(rVersion))
 
-    SQLInsert(curs, "config", key="FPBRACK_minX", value=str(minX))
-    SQLInsert(curs, "config", key="FPBRACK_maxX", value=str(maxX))
     SQLInsert(curs, "config", key="FPBRACK_groupSizePPM", value=str(groupSizePPM))
     SQLInsert(curs, "config", key="FPBRACK_positiveScanEvent", value=str(positiveScanEvent))
     SQLInsert(curs, "config", key="FPBRACK_negativeScanEvent", value=str(negativeScanEvent))
@@ -64,7 +62,7 @@ def writeConfigToDB(curs, align, file, groupSizePPM, maxLoading, maxTimeDeviatio
     SQLInsert(curs, "config", key="FPBRACK_nPolynom", value=str(nPolynom))
 
 # bracket results
-def bracketResults(indGroups, minX, maxX, groupSizePPM, positiveScanEvent=None, negativeScanEvent=None,
+def bracketResults(indGroups, groupSizePPM, positiveScanEvent=None, negativeScanEvent=None,
                  maxTimeDeviation=0.36 * 60, maxLoading=1, file="./results.tsv", align=True, nPolynom=1,
                  pwMaxSet=None, pwValSet=None, rVersion="", meVersion=""):
 
@@ -99,7 +97,7 @@ def bracketResults(indGroups, minX, maxX, groupSizePPM, positiveScanEvent=None, 
         resDB.curs.execute("DROP TABLE IF EXISTS config")
         resDB.curs.execute("CREATE TABLE config(id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, value TEXT)")
 
-        writeConfigToDB(resDB.curs, align, file, groupSizePPM, maxLoading, maxTimeDeviation, maxX, minX, nPolynom,
+        writeConfigToDB(resDB.curs, align, file, groupSizePPM, maxLoading, maxTimeDeviation, nPolynom,
                         negativeScanEvent, positiveScanEvent, rVersion, meVersion)
 
 
@@ -154,18 +152,21 @@ def bracketResults(indGroups, minX, maxX, groupSizePPM, positiveScanEvent=None, 
             totalChromPeaks = 0
             tracersDeltaMZ = {}
 
+            uniqueXCounts=set()
+
             # check each processed LC-HRMS file if the used data processing parameters match
             for res in results:
                 for row in res.curs.execute(
-                        "SELECT c.id, c.tracer, c.NPeakCenter, c.NPeakCenterMin, c.NPeakScale, c.NSNR, c.NPeakArea, c.mz, c.xcount, c.LPeakCenter, c.LPeakCenterMin, c.LPeakScale, c.LSNR, c.LPeakArea, c.Loading, f.fGroupId, t.name, c.ionMode "
+                        "SELECT c.id, c.tracer, c.NPeakCenter, c.NPeakCenterMin, c.NPeakScale, c.NSNR, c.NPeakArea, c.mz, c.xcount, c.LPeakCenter, c.LPeakCenterMin, c.LPeakScale, c.LSNR, c.LPeakArea, c.Loading, f.fGroupId, t.name, c.ionMode, c.lmz, c.deltamzTheoretical "
                         "FROM chromPeaks c INNER JOIN featureGroupFeatures f ON c.id=f.fID INNER JOIN tracerConfiguration t ON c.tracer=t.id"):
                     cp = ChromPeakPair(id=row[0], tracer=row[1], NPeakCenter=row[2], NPeakCenterMin=row[3],
-                                   NPeakScale=row[4], NSNR=row[5], NPeakArea=row[6], mz=row[7], xCount=row[8],
+                                   NPeakScale=row[4], NSNR=row[5], NPeakArea=row[6], mz=row[7], xCount=row[8], lmz=row[18], deltamzTheoretical=row[19],
                                    LPeakCenter=row[9], LPeakCenterMin=row[10], LPeakScale=row[11], LSNR=row[12],
                                    LPeakArea=row[13], loading=row[14], fGroupID=row[15], tracerName=row[16],
                                    ionMode=str(row[17]))
 
                     assert cp.ionMode in ionModes.keys()
+                    uniqueXCounts.add(cp.xCount)
                     res.featurePairs.append(cp)
 
                 rows = []
@@ -213,7 +214,7 @@ def bracketResults(indGroups, minX, maxX, groupSizePPM, positiveScanEvent=None, 
             for ionMode in ionModes:
                 scanEvent = ionModes[ionMode]
                 for tracer in tracersDeltaMZ:
-                    for xCount in range(minX, maxX + 1):
+                    for xCount in list(uniqueXCounts):
                         for cLoading in range(maxLoading, 0, -1):
                             totalThingsToDo+=1
 
@@ -225,7 +226,7 @@ def bracketResults(indGroups, minX, maxX, groupSizePPM, positiveScanEvent=None, 
             for ionMode in ionModes:
                 scanEvent = ionModes[ionMode]
                 for tracer in tracersDeltaMZ:
-                    for xCount in range(minX, maxX + 1):
+                    for xCount in list(uniqueXCounts):
                         for cLoading in range(maxLoading, 0, -1):
                             doneSoFar+=1
                             if floor(doneSoFar/totalThingsToDo*100)>doneSoFarPercent:
@@ -404,11 +405,15 @@ def bracketResults(indGroups, minX, maxX, groupSizePPM, positiveScanEvent=None, 
 
                                         groupedChromPeaks = []
                                         groupedChromPeaksAVGMz = []
+                                        groupedChromPeaksAVGLMz = []
+                                        groupedChromPeaksAVGdeltaMz = []
                                         groupedChromPeaksAVGTimes = []
 
                                         for i in range(maxGroup + 1):
                                             groupedChromPeaks.append({})
                                             groupedChromPeaksAVGMz.append([])
+                                            groupedChromPeaksAVGLMz.append([])
+                                            groupedChromPeaksAVGdeltaMz.append([])
                                             groupedChromPeaksAVGTimes.append([])
 
                                         # calculate average values (RT and mz) for feature pairs in the sub-subclusters
@@ -420,33 +425,35 @@ def bracketResults(indGroups, minX, maxX, groupSizePPM, positiveScanEvent=None, 
                                                 groupedChromPeaks[aligned[j][1]][k].append(
                                                     (aligned[j], partChromPeaks[k][i]))
                                                 groupedChromPeaksAVGMz[aligned[j][1]].append(partChromPeaks[k][i].mz)
+                                                groupedChromPeaksAVGLMz[aligned[j][1]].append(partChromPeaks[k][i].lmz)
+                                                groupedChromPeaksAVGdeltaMz[aligned[j][1]].append(partChromPeaks[k][i].deltamzTheoretical)
                                                 groupedChromPeaksAVGTimes[aligned[j][1]].append(
                                                     partChromPeaks[k][i].NPeakCenterMin)
 
                                                 j = j + 1
 
                                         assert (j == len(aligned))
-                                        assert (
-                                            len(groupedChromPeaks) == len(groupedChromPeaksAVGMz) == len(
-                                                groupedChromPeaksAVGTimes))
+                                        assert (len(groupedChromPeaks) == len(groupedChromPeaksAVGMz) == len(groupedChromPeaksAVGTimes))
 
                                         # write results to data matrix and SQLite DB
                                         for i in range(minGroup, maxGroup + 1):
                                             if len(groupedChromPeaks[i]) > 0:
                                                 avgmz = sum(groupedChromPeaksAVGMz[i]) / len(groupedChromPeaksAVGMz[i])
+                                                avglmz = sum(groupedChromPeaksAVGLMz[i]) / len(groupedChromPeaksAVGLMz[i])
+                                                avgdeltaMz = sum(groupedChromPeaksAVGdeltaMz[i]) / len(groupedChromPeaksAVGdeltaMz[i])
                                                 avgtime = sum(groupedChromPeaksAVGTimes[i]) / len(
                                                     groupedChromPeaksAVGTimes[i])
                                                 f.write(str(curNum))
                                                 f.write("\t")
                                                 f.write(str(avgmz))
                                                 f.write("\t")
-                                                f.write(str(avgmz + xCount * tracersDeltaMZ[tracer] / cLoading))
+                                                f.write(str(avglmz))
                                                 f.write("\t")
-                                                f.write(str(xCount * tracersDeltaMZ[tracer] / cLoading))
+                                                f.write(str(avgdeltaMz))
                                                 f.write("\t")
                                                 f.write("%.2f" % (avgtime / 60.))
                                                 f.write("\t")
-                                                f.write("%d" % xCount)
+                                                f.write("%s" % xCount)
                                                 f.write("\t")
                                                 f.write(str(cLoading))
                                                 f.write("\t")
@@ -466,8 +473,8 @@ def bracketResults(indGroups, minX, maxX, groupSizePPM, positiveScanEvent=None, 
                                                 f.write("") # M
 
 
-                                                SQLInsert(resDB.curs, "GroupResults", id=curNum, mz=avgmz, lmz=avgmz + xCount * tracersDeltaMZ[tracer] / cLoading,
-                                                            dmz=xCount * tracersDeltaMZ[tracer] / cLoading, rt=avgtime, xn=xCount, charge=cLoading, ionisationMode=ionMode, scanEvent=scanEvent,
+                                                SQLInsert(resDB.curs, "GroupResults", id=curNum, mz=avgmz, lmz=avglmz,
+                                                            dmz=avgdeltaMz, rt=avgtime, xn=xCount, charge=cLoading, ionisationMode=ionMode, scanEvent=scanEvent,
                                                             tracer=str(tracer))
 
                                                 doublePeak = 0
@@ -566,8 +573,6 @@ def bracketResults(indGroups, minX, maxX, groupSizePPM, positiveScanEvent=None, 
             f.write("# MEVersion=%s, RVersion=%s\n"%(meVersion, rVersion))
 
             processingParams=[]
-            processingParams.append("FPBRACK_minX=%s"%str(minX))
-            processingParams.append("FPBRACK_maxX=%s"%str(maxX))
             processingParams.append("FPBRACK_groupSizePPM=%s"%str(groupSizePPM))
             processingParams.append("FPBRACK_positiveScanEvent=%s"%str(positiveScanEvent))
             processingParams.append("FPBRACK_negativeScanEvent=%s"%str(negativeScanEvent))
