@@ -86,9 +86,6 @@ def getCombinationsOfLabel(useElems, labelingElements, minLabelingAtoms, maxLabe
 
 
 
-
-
-
 # detects in each recorded MS scan (lvl. 1) isotope patterns originating from a native and a (partially) labelled
 # metabolite / biotransformation product. It is important, that all atoms that can be labelled are actually
 # labelled and have the same chance to be labelled. Thus, fluxomics applications or such isotope patterns
@@ -126,8 +123,13 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
         b.purityLArray = getSubstitutionArray(b.isotopicEnrichmentLabeled, b.maxXn + 3, maxSub)   # labelled metabolite
 
     ## combinations of labeling elements
-    combs=getCombinationsOfLabel(["C", "H"], labelingElements, minLabelingAtoms, maxLabelingAtoms)
-
+    tempCombs=getCombinationsOfLabel(["C", "H"], labelingElements, minLabelingAtoms, maxLabelingAtoms)
+    combs=[]
+    for comb in tempCombs:
+        if comb.atomsCount==3 and comb.atoms["H"]==3:
+            pass
+        else:
+            combs.append(comb)
 
     # iterate over all MS scans (lvl. 1)
     curScanIndex=0

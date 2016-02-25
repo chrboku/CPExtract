@@ -2465,7 +2465,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             it.myType = "MZs"
             count = 0
             children=[]
-            if False:
+            if True:
                 for mzRes in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT id, mz, xcount, scanid, loading, scantime, intensity FROM MZs ORDER BY scanid"):
                     d = QtGui.QTreeWidgetItem(it, [str(s) for s in [mzRes.mz, mzRes.xcount, mzRes.scanid, mzRes.scantime/60., mzRes.loading, mzRes.intensity]])
                     d.myType = "mz"
@@ -2496,7 +2496,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 maxInner = 0.
                 xcount = 0
 
-                if False:
+                if True:
                     for mzRes in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT id, mz, "
                                                                                                 "xcount, "
                                                                                                 "scanid, "
@@ -2509,13 +2509,13 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                         dd.myID=int(mzRes.id)
                         minInner = min(float(mzRes.mz), minInner)
                         maxInner = max(maxInner, mzRes.mz)
-                        xcount = int(mzRes.xcount)
+                        xcount = str(mzRes.xcount)
                         d.addChild(dd)
                         countinner += 1
 
                 d.setText(0, "%s (%d)" % (str(mzbin.mz), countinner))
                 d.setText(1, "%.4f" % ((maxInner - minInner) * 1000000. / minInner))
-                d.setText(2, "%d" % xcount)
+                d.setText(2, "%s" % xcount)
                 count += 1
             it.addChildren(children)
             it.setText(1, "%d" % count)
