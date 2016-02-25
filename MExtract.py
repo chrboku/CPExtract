@@ -5178,14 +5178,11 @@ if __name__ == '__main__':
 
 
             # print development messages
-            if False:
+            if True:
                 import textwrap
 
                 messages={"Severe":[], "Error":[], "Warning":[], "Info":[]}
-                messages["Severe"].append("Metabolite cluster calculation is in beta testing. Please review the process and report issues!")
-                messages["Info"].append("Beta version")
-                messages["Info"].append("Remove those messages (and the GUI-component)")
-                messages["Info"].append("Add gradient descend peak picking")
+                messages["Info"].append("Special version for Hanson data: Double labeling with 2H and 13C")
 
                 allMessages=[]
 
