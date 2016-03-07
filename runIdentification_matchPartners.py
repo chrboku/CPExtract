@@ -126,7 +126,12 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
     tempCombs=getCombinationsOfLabel(["C", "H"], labelingElements, minLabelingAtoms, maxLabelingAtoms)
     combs=[]
     for comb in tempCombs:
-        if comb.atomsCount==3 and comb.atoms["H"]==3:
+        ## remove implausible labeling combinations
+        if comb.atomsCount==3 and "H" in comb.atoms.keys() and comb.atoms["H"]==3:
+            pass
+        elif comb.atomsCount==2 and "H" in comb.atoms.keys() and comb.atoms["H"]==2:
+            pass
+        elif comb.atomsCount==2 and "C" in comb.atoms.keys() and comb.atoms["C"]==1 and "H" in comb.atoms.keys() and comb.atoms["H"]==1:
             pass
         else:
             combs.append(comb)

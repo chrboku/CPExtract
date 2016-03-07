@@ -2,8 +2,8 @@
 # Calculate isotopic enrichment using M+1 and M (or M'-1 and M')
 # Note: Use determined number of carbon atoms (delta M' and M) only in AllExtract data processing or 
 #       to determine the isotopic enrichment of the 13C-labelled tracer
-Cn=11
-ratioOfMpOneToM=.19
+Cn=18
+ratioOfMpOneToM=.11
 substitutions=1
 
 

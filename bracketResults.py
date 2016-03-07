@@ -740,7 +740,7 @@ def calculateMetaboliteGroups(file="./results.tsv", groups=[],
         assert "Loss" in cols
         assert "M" in cols
         assert "doublePeak" in cols
-        table.executeSQL("DELETE FROM :table: WHERE doublePeak>0")
+        #table.executeSQL("DELETE FROM :table: WHERE doublePeak>0")
         ## file specific columns
 
         for group in useGroups:
