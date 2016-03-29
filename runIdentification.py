@@ -1839,8 +1839,11 @@ class RunIdentification:
                             if pb >= self.minCorrelation:
                                 nodes[peakA.id].append(peakB.id)
                                 nodes[peakB.id].append(peakA.id)
+                            try:
 
-                            SQLInsert(curs, "featurefeatures", fID1=peakA.id, fID2=peakB.id, corr=pb)
+                                SQLInsert(curs, "featurefeatures", fID1=peakA.id, fID2=peakB.id, corr=pb)
+                            except OperationalError as ex:
+                                self.printMessage(ex.message)
 
             self.postMessageToProgressWrapper("text", "%s: Identifying feature groups" % tracer.name)
 
