@@ -112,7 +112,7 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
     labelingElements["C"]=Bunch(nativeIsotope="12C", labelingIsotope="13C", massNative=12.      , massLabeled=13.00335 , isotopicEnrichmentNative=0.9893, isotopicEnrichmentLabeled=0.995, minXn=1, maxXn=2)
     labelingElements["H"]=Bunch(nativeIsotope= "1H", labelingIsotope= "2H", massNative=1.0078250, massLabeled=2.0141018, isotopicEnrichmentNative=0.9999, isotopicEnrichmentLabeled=0.96 , minXn=1, maxXn=3)
 
-    minLabelingAtoms=3
+    minLabelingAtoms=5
     maxLabelingAtoms=5
 
 
@@ -221,21 +221,31 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
                                                                 continue ## ratio check not passed
 
                                                         # find M'-1 peak
-                                                        isoM_pXm1 = curScan._findMZGeneric(curPeakmz + (comb.mzdelta - 1.00628*(1.+5./1000000)) / curLoading, curPeakmz + (comb.mzdelta - 1.00335*(1.-5./1000000)) / curLoading)
+                                                        isoM_pXm1 = curScan._findMZGeneric(curPeakmz + (comb.mzdelta - 1.00628*(1.+curPeakmz*ppm/1000000)) / curLoading, curPeakmz + (comb.mzdelta - 1.00335*(1.-curPeakmz*ppm/1000000)) / curLoading)
                                                         isoM_pXm1 = curScan.getMostIntensePeak(isoM_pXm1[0], isoM_pXm1[1])
 
                                                         if isoM_pXm1 != -1:
                                                             isoPeakIntensity=curScan.intensity_list[isoM_pXm1]
                                                             rat=isoPeakIntensity/labPeakIntensity
 
-                                                            if rat<=0.25:
+                                                            if rat<=0.5:
                                                                 pass
                                                             else:
                                                                 continue
 
 
+                                                        # find M'+1 peak
+                                                        isoM_pXp1 = curScan._findMZGeneric(curPeakmz + (comb.mzdelta + 1.00335*(1.-curPeakmz*ppm/1000000)) / curLoading, curPeakmz + (comb.mzdelta + 1.00628*(1.+curPeakmz*ppm/1000000)) / curLoading)
+                                                        isoM_pXp1 = curScan.getMostIntensePeak(isoM_pXp1[0], isoM_pXp1[1])
 
+                                                        if isoM_pXp1 != -1:
+                                                            isoPeakIntensity=curScan.intensity_list[isoM_pXp1]
+                                                            rat=isoPeakIntensity/labPeakIntensity
 
+                                                            if rat<=0.9:
+                                                                pass
+                                                            else:
+                                                                continue
 
                                                         # All verification criteria are passed, store the ion signal pair
                                                         # for further processing
