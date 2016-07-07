@@ -123,18 +123,15 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
         b.purityLArray = getSubstitutionArray(b.isotopicEnrichmentLabeled, b.maxXn + 3, maxSub)   # labelled metabolite
 
     ## combinations of labeling elements
-    tempCombs=getCombinationsOfLabel(["C", "H"], labelingElements, minLabelingAtoms, maxLabelingAtoms)
+    tempCombs=getCombinationsOfLabel(["C", "H"], labelingElements, 3, 5)
     combs=[]
     for comb in tempCombs:
         ## remove implausible labeling combinations
-        if comb.atomsCount==3 and "H" in comb.atoms.keys() and comb.atoms["H"]==3:
-            pass
-        elif comb.atomsCount==2 and "H" in comb.atoms.keys() and comb.atoms["H"]==2:
-            pass
-        elif comb.atomsCount==2 and "C" in comb.atoms.keys() and comb.atoms["C"]==1 and "H" in comb.atoms.keys() and comb.atoms["H"]==1:
-            pass
-        else:
+        if   comb.atomsCount==4 and "C" in comb.atoms.keys() and comb.atoms["C"]==2 and "H" in comb.atoms.keys() and comb.atoms["H"]==2:
             combs.append(comb)
+        elif comb.atomsCount==5 and "C" in comb.atoms.keys() and comb.atoms["C"]==2 and "H" in comb.atoms.keys() and comb.atoms["H"]==3:
+            combs.append(comb)
+
 
     # iterate over all MS scans (lvl. 1)
     curScanIndex=0
@@ -196,11 +193,23 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
                                         # |||                  ||||
                                         # Necessary mainly for 13C-labelling with mirror-symmetric isotope patterns
                                         # NOTE: - Approach is mainly used for 13C-labelling
+
                                         if useCValidation==0:
                                             # find M+1 peak
                                             isoM_p1 = curScan.findMZ(curPeakmz + carbonMassOffset / curLoading, ppm, start=currentPeakIndex)
                                             isoM_p1 = curScan.getMostIntensePeak(isoM_p1[0], isoM_p1[1])
-                                            if isoM_p1 != -1 or peakCountLeft == 1 or lowAbundanceIsotopeCutoff:
+                                            intIsoM_p1=0
+                                            if isoM_p1 != -1:
+                                                intIsoM_p1=curScan.intensity_list[isoM_p1]
+
+                                            isoM_m1 = curScan.findMZ(curPeakmz - carbonMassOffset / curLoading, ppm, start=currentPeakIndex)
+                                            isoM_m1 = curScan.getMostIntensePeak(isoM_m1[0], isoM_m1[1])
+                                            intIsoM_m1=0
+                                            if isoM_m1 != -1:
+                                                intIsoM_m1=curScan.intensity_list[isoM_m1]
+
+
+                                            if intIsoM_p1<curPeakIntensity and intIsoM_m1<curPeakIntensity and (isoM_p1 != -1 or peakCountLeft == 1 or lowAbundanceIsotopeCutoff):
                                                 # test certain number of labelled carbon atoms
 
                                                 for comb in combs:
@@ -228,7 +237,7 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
                                                             isoPeakIntensity=curScan.intensity_list[isoM_pXm1]
                                                             rat=isoPeakIntensity/labPeakIntensity
 
-                                                            if rat<=0.5:
+                                                            if rat<=0.75:
                                                                 pass
                                                             else:
                                                                 continue
