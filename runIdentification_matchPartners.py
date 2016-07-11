@@ -255,6 +255,8 @@ def matchPartners(mzXMLData, labellingElement, useCValidation, intensityThres, i
                                                                 pass
                                                             else:
                                                                 continue
+                                                        elif comb.atomsCount==4:
+                                                            continue
 
                                                         # All verification criteria are passed, store the ion signal pair
                                                         # for further processing
