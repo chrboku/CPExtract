@@ -23,6 +23,10 @@ class MSScan():
 
     # returns the most abundant ms peak in a given range
     def getMostIntensePeak(self, leftInd, rightInd, minInt=0):
+
+        if leftInd == -1 and rightInd == -1:
+            return -1
+
         i = -1
         v = -1
         if leftInd != -1 and rightInd != -1:

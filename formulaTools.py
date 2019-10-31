@@ -134,12 +134,17 @@ class formulaTools:
         if pos >= len(formula):
             return -1, 1
 
+        atomCountMult=1
+        if formula[pos]=="-":
+            atomCountMult = -1
+            pos=pos+1
+
         if formula[pos].isdigit():
             num = ""
             while formula[pos].isdigit() and pos < len(formula):
                 num = num + formula[pos]
                 pos = pos + 1
-            return pos, int(num)
+            return pos, int(num)*atomCountMult
         else:
             return pos, 1
 
@@ -316,6 +321,17 @@ class formulaTools:
 
         return mw
 
+    def calcIsotopologOffsetWeight(self, elems):
+        mw = 0.
+        for elem in elems.keys():
+            if not (self.isIso(elem)):
+                pass
+            else:
+                curElem, iso = self.getElementFor(elem)
+                mw = mw + self.elemDetails[iso + curElem][3] * elems[elem] - self.elemDetails[curElem][3] * elems[elem]
+
+        return mw
+
     # returns putaive isotopes for a given mz difference
     def getPutativeIsotopes(self, mzdiff, atMZ, z=1, ppm=5., maxIsoCombinations=1, used=[]):
         mzdiff = mzdiff * z
@@ -378,7 +394,7 @@ class formulaTools:
                 else:
                     fElems["[" + iso + curElem + "]"] = elems[elem]
 
-        return "".join([("%s%s%d%s" % (e, subStart, fElems[e], subEnd) if fElems[e] > 1 else "%s" % e) for e in
+        return "".join([("%s%s%d%s" % (e, subStart, fElems[e], subEnd) if fElems[e] !=1 else "%s" % e) for e in
                         sorted(fElems.keys())])
 
 
@@ -434,16 +450,17 @@ if __name__ == '__main__':
 
     fT = formulaTools()
 
-    formulas = ["C9H11NO2"]
+    formulas = ["[13C]9H11NO2", "C9H11NO2", "[13C]2C7H11NO2", "C-1", "[13C]-2"]
 
     res=[]
     for form in formulas:
         elems = fT.parseFormula(form)
-        res.append([form, str(elems), "%.5f"%fT.calcMolWeight(elems), "%.5f"%(fT.calcMolWeight(elems)+1.007276), "%.5f"%(fT.calcMolWeight(elems)+18.033823),
+        res.append([form, str(elems), "%.5f"%fT.calcMolWeight(elems), "%.5f"%fT.calcIsotopologOffsetWeight(elems),
+                    "%.5f"%(fT.calcMolWeight(elems)+1.007276), "%.5f"%(fT.calcMolWeight(elems)+18.033823),
                     "%.5f"%(fT.calcMolWeight(elems)+22.989218), "%.5f"%(fT.calcMolWeight(elems)+44.998201), "%.5f"%(fT.calcMolWeight(elems)-1.007276), fT.flatToString(elems)])
 
     from utils import printAsTable
-    printAsTable(["Input", "Parsed", "Mass", "[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+Fa-H]-", "[M-H]-", "Rendered"], res, printInExcelFormat=True)
+    printAsTable(["Input", "Parsed", "Mass", "Isotopolog offset mass", "[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+Fa-H]-", "[M-H]-", "Rendered"], res, printInExcelFormat=False)
     
     
     

@@ -120,7 +120,7 @@ class RunIdentification:
     def __init__(self, file, exOperator="", exExperimentID="", exComments="", exExperimentName="",
                  writePDF=False, writeFeatureML=False, writeTSV=False, writeMZXML=9,
                  metabolisationExperiment=False,
-                 labellingisotopeA='12C', labellingisotopeB='13C', useCIsotopePatternValidation=False, xOffset=1.00335,
+                 labellingisotopeA='12C', labellingisotopeB='13C', useCIsotopePatternValidation=0, xOffset=1.00335,
                  minRatio=0, maxRatio=9999999, useRatio=False,
                  configuredTracers=[], intensityThreshold=0, intensityCutoff=0, maxLoading=1, xCounts="", ppm=2.,
                  isotopicPatternCountLeft=2, isotopicPatternCountRight=2, lowAbundanceIsotopeCutoff=True, intensityThresholdIsotopologs=1000,

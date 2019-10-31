@@ -45,6 +45,7 @@ from MetExtractII_Main import MetExtractVersion
 # experiment types
 TRACER=object()
 METABOLOME=object()
+CUSTOMPATTERN=object()
 
 #<editor-fold desc="### check if R is installed and accessible">
 def checkR():
@@ -2118,15 +2119,24 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 self.ui.processIndividualFiles.setChecked(sett.value("processIndividualFiles").toBool())
 
             if checkExperimentType:
-                if sett.contains("TracerExperiment") :
-                    if sett.value("TracerExperiment").toBool() and self.labellingExperiment==METABOLOME:
+                if sett.contains("ExperimentType"):
+                    if sett.value("TracExtract").toBool() and self.labellingExperiment!=TRACER:
                         QtGui.QMessageBox.warning(self, "MetExtract", "Warning: You are trying to open a TracExtract experiment "
-                                                                      "with AllExtract. Labelling parameters will not be loaded. "
+                                                                      "with the wrong module. Labelling parameters will not be loaded. "
                                                                       "Please switch to TracExtract", QtGui.QMessageBox.Ok)
-                    elif not(sett.value("TracerExperiment").toBool()) and self.labellingExperiment==TRACER:
-                        QtGui.QMessageBox.warning(self, "MetExtract", "Warning: You are trying to open an AllExtract experiment "
-                                                                      "with TracExtract. Labelling parameters will not be loaded. "
-                                                                      "Please switch to AllExtract", QtGui.QMessageBox.Ok)
+
+                    if sett.value("Full metabolome labeling").toBool() and self.labellingExperiment != METABOLOME:
+                        QtGui.QMessageBox.warning(self, "MetExtract",
+                                                  "Warning: You are trying to open an AllExtract experiment "
+                                                  "with the wrong module. Labelling parameters will not be loaded. "
+                                                  "Please switch to AllExtract", QtGui.QMessageBox.Ok)
+
+                    if sett.value("Custom pattern").toBool() and self.labellingExperiment != TRACER:
+                        QtGui.QMessageBox.warning(self, "MetExtract",
+                                                  "Warning: You are trying to open a CPExtract experiment "
+                                                  "with the wrong module. Labelling parameters will not be loaded. "
+                                                  "Please switch to CPExtract", QtGui.QMessageBox.Ok)
+
                 else:
                     QtGui.QMessageBox.warning(self, "MetExtract", "Warning: Experiment type is not stored in the settings. Please ensure "
                                                                   "that the correct module has been loaded for your experiment",
@@ -2151,6 +2161,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 self.ui.minRatio.setValue(sett.value("minRatio").toDouble()[0])
             if sett.contains("maxRatio") and self.labellingExperiment==METABOLOME:
                 self.ui.maxRatio.setValue(sett.value("maxRatio").toDouble()[0])
+
+            ## todo load CP parameters
 
             if sett.contains("IntensityThreshold"):
                 self.ui.intensityThreshold.setValue(sett.value("IntensityThreshold").toInt()[0])
@@ -2401,11 +2413,11 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             sett.setValue("processIndividualFiles", self.ui.processIndividualFiles.checkState() == QtCore.Qt.Checked)
 
-            sett.setValue("TracerExperiment", self.labellingExperiment==TRACER)
+            sett.setValue("ExperimentType", "TracExtract" if self.labellingExperiment==TRACER else ("FML" if self.labellingExperiment==METABOLOME else "CUSTOMPATTERN"))
 
             if self.labellingExperiment==TRACER:
                 sett.setValue("tracerConfiguration", base64.b64encode(dumps(self.configuredTracers)))
-            else:
+            if self.labellingExperiment==METABOLOME:
                 sett.setValue("LabellingElementA", self.ui.isotopeAText.text())
                 sett.setValue("IsotopicAbundanceA", self.ui.isotopicAbundanceA.value())
                 sett.setValue("LabellingElementB", self.ui.isotopeBText.text())
@@ -2414,6 +2426,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 sett.setValue("useRatio", self.ui.useRatio.isChecked())
                 sett.setValue("minRatio", self.ui.minRatio.value())
                 sett.setValue("maxRatio", self.ui.maxRatio.value())
+            if self.labellingExperiment==CUSTOMPATTERN:
+                pass # TODO save cp parameters
 
             sett.setValue("IntensityThreshold", self.ui.intensityThreshold.value())
             sett.setValue("IntensityCutoff", self.ui.intensityCutoff.value())
@@ -2745,7 +2759,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                   useRatio=self.ui.useRatio.isChecked(),
                                   minRatio=self.ui.minRatio.value(),
                                   maxRatio=self.ui.maxRatio.value(),
-                                  useCIsotopePatternValidation=int(str(self.ui.useCValidation.checkState())),
+                                  useCIsotopePatternValidation=int(str(self.ui.useCValidation.checkState())) if self.labellingExperiment!=CUSTOMPATTERN else 2,
                                   configuredTracers=self.configuredTracers, startTime=self.ui.scanStartTime.value(),
                                   stopTime=self.ui.scanEndTime.value(), maxLoading=self.ui.maxLoading.value(),
                                   xCounts=str(self.ui.xCountSearch.text()),
@@ -2934,7 +2948,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                       useRatio=self.ui.useRatio.isChecked(),
                                                       minRatio=self.ui.minRatio.value(),
                                                       maxRatio=self.ui.maxRatio.value(),
-                                                      useCValidation=int(str(self.ui.useCValidation.checkState())),
+                                                      useCIsotopePatternValidation=int(str(self.ui.useCValidation.checkState())) if self.labellingExperiment != CUSTOMPATTERN else 2,
                                                       configuredTracers="[%s]"%",".join([str(t) for t in self.configuredTracers]), startTime=self.ui.scanStartTime.value(),
                                                       stopTime=self.ui.scanEndTime.value(), maxLoading=self.ui.maxLoading.value(),
                                                       xCounts=str(self.ui.xCountSearch.text()),
@@ -3113,7 +3127,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                                 useRatio=self.ui.useRatio.isChecked(),
                                                                 minRatio=self.ui.minRatio.value(),
                                                                 maxRatio=self.ui.maxRatio.value(),
-                                                                useCIsotopePatternValidation=int(str(self.ui.useCValidation.checkState())),
+                                                                useCIsotopePatternValidation=int(str(self.ui.useCValidation.checkState())) if self.labellingExperiment != CUSTOMPATTERN else 2,
                                                                 configuredTracers=self.configuredTracers, startTime=self.ui.scanStartTime.value(),
                                                                 stopTime=self.ui.scanEndTime.value(), maxLoading=self.ui.maxLoading.value(),
                                                                 xCounts=str(self.ui.xCountSearch.text()),
@@ -6953,6 +6967,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def setModuleUI(self, val):
         if val==TRACER:
             self.ui.label_50.setText("TracExtract experiment")
+            self.ui.setupTracers.setVisible(True)
+            self.ui.tracerExperimentLabel.setVisible(True)
 
             self.ui.groupBox_ISOA.setVisible(False)
             self.ui.groupBox_ISOB.setVisible(False)
@@ -6960,8 +6976,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             self.ui.useRatio.setVisible(False)
 
-            self.ui.setupTracers.setVisible(True)
-            self.ui.tracerExperimentLabel.setVisible(True)
         elif val==METABOLOME:
             self.ui.label_50.setText("AllExtract experiment")
 
@@ -6973,6 +6987,18 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.ui.useCValidation.setVisible(True)
 
             self.ui.useRatio.setVisible(True)
+
+        elif val==CUSTOMPATTERN:
+            self.ui.label_50.setText("CPExtract experiment")
+
+            self.ui.setupTracers.setVisible(False)
+            self.ui.tracerExperimentLabel.setVisible(False)
+
+            self.ui.groupBox_ISOA.setVisible(False)
+            self.ui.groupBox_ISOB.setVisible(False)
+            self.ui.useCValidation.setVisible(False)
+
+            self.ui.useRatio.setVisible(False)
         else:
             raise Exception("undefined module provided")
 
@@ -7259,11 +7285,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         elif module=="AllExtract":
             self.labellingExperiment=METABOLOME
             logging.info("  Starting module AllExtract\n")
+        elif module=="CPExtract":
+            self.labellingExperiment=CUSTOMPATTERN
+            logging.info("   Starting module CPExtract\n")
         else:
-            logging.error("Error: invalid module '%s' selected.\nPlease specify either 'TracExtract' or 'AllExtract'\n"%module)
-            QtGui.QMessageBox.warning(self, "MetExtract", "Error: invalid module '%s' selected.\nPlease specify either 'TracExtract' or 'AllExtract'\n"%module,
+            logging.error("Error: invalid module '%s' selected.\nPlease specify either 'TracExtract', 'AllExtract' or 'CPExtract'\n"%module)
+            QtGui.QMessageBox.warning(self, "MetExtract", "Error: invalid module '%s' selected.\nPlease specify either 'TracExtract', 'AllExtract' of 'CPExtract'\n"%module,
                                       QtGui.QMessageBox.Ok)
-            raise Exception("Error: invalid module '%s' selected.\nPlease specify either 'TracExtract' or 'AllExtract'")
+            raise Exception("Error: invalid module '%s' selected.\nPlease specify either 'TracExtract', 'AllExtract' or 'CPExtract'")
 
         self.setModuleUI(self.labellingExperiment)
 
@@ -7271,7 +7300,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         # display used R-Version in main interface
         try:
             v = r("R.Version()$version.string")
-            module="AllExtract" if self.labellingExperiment==METABOLOME else ("TracExtract" if self.labellingExperiment==TRACER else "")
+            module="AllExtract" if self.labellingExperiment==METABOLOME else ("TracExtract" if self.labellingExperiment==TRACER else ("CPExtract" if self.labellingExperiment==CUSTOMPATTERN else ""))
             self.ui.version.versionText="%s II %s [Environment: Python: %s (%s), R: %s]" % (module, MetExtractVersion, platform.python_version(), platform.architecture()[0], str(v)[5:(len(str(v)) - 1)])
             self.ui.version.setText(self.ui.version.versionText)
         except:
