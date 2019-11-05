@@ -36,16 +36,17 @@ def getSubstitutionArray(purity, xMax, maxSub):
 
 # results object (ion signal pairs)
 class mzFeature:
-    def __init__(self, mz, lmz, tmz, xCount, scanIndex, loading, nIntensity, lIntensity, ionMode):
+    def __init__(self, mz, similarityString, scanIndex, loading, nIntensity, ionMode, type="pair", otherIsotopologs=None):
         self.mz = mz
-        self.lmz = lmz
-        self.tmz = tmz
-        self.xCount = xCount
+        self.similarityString = similarityString
         self.scanIndex = scanIndex
         self.loading = loading
         self.nIntensity = nIntensity
-        self.lIntensity = lIntensity
         self.ionMode = ionMode
+        self.type=type
+        if otherIsotopologs==None:
+            otherIsotopologs={}
+        self.otherIsotopologs=otherIsotopologs
 
     def __str__(self):
         return "mz: %.4f, lmz: %.4f, xCount: %d, charge: %d, NInt: %.1f, LInt: %.1f, ionMode: %s, scanIndex: %d"%(
@@ -85,7 +86,7 @@ def getCombinationsOfLabel(useElems, labelingElements, minLabelingAtoms, maxLabe
 # are in general not supported. They can, however, be detected if not isotopolog verification step is
 # used (not recommended)
 def matchPartners(mzXMLData, forFile,
-                  labellingElement, useCIsotopePatternValidation, intensityThres, isotopologIntensityThres, maxLoading, xCounts, xOffset, ppm,
+                  labellingIsotopeB, useCIsotopePatternValidation, intensityThres, isotopologIntensityThres, maxLoading, xCounts, xOffset, ppm,
                   intensityErrorN, intensityErrorL, purityN, purityL, startTime, stopTime, filterLine, ionMode,
                   peakCountLeft, peakCountRight, lowAbundanceIsotopeCutoff, metabolisationExperiment, checkRatio,
                   minRatio, maxRatio, reportFunction=None, writeExtendedDiagnostics=True, searchDirection="asc"):
@@ -107,44 +108,20 @@ def matchPartners(mzXMLData, forFile,
     fT = formulaTools()
 
 
-    ## Double labeling
-    labelingElements={}
-    labelingElements["C"]=Bunch(nativeIsotope="12C", labelingIsotope="13C", massNative=12.      , massLabeled=13.00335 , isotopicEnrichmentNative=0.9893, isotopicEnrichmentLabeled=0.995, minXn=1, maxXn=3)
-    labelingElements["H"]=Bunch(nativeIsotope= "1H", labelingIsotope= "2H", massNative=1.0078250, massLabeled=2.0141018, isotopicEnrichmentNative=0.9999, isotopicEnrichmentLabeled=0.96 , minXn=0, maxXn=9)
-
-    ## combinations of labeling elements
-    tempCombs=getCombinationsOfLabel(["C", "H"], labelingElements, 2, 12)
-    combs=[]
-    for comb in tempCombs:
-        ## remove implausible labeling combinations
-        if True:
-            if "C" in comb.atoms.keys() and comb.atoms["C"]==1 and ("H" not in comb.atoms.keys() or ("H" in comb.atoms.keys() and comb.atoms["H"] in [1,2,3])):
-                combs.append(comb)
-            if "C" in comb.atoms.keys() and comb.atoms["C"]==2 and ("H" not in comb.atoms.keys() or ("H" in comb.atoms.keys() and comb.atoms["H"] in [1,2,3,4,5,6])):
-                combs.append(comb)
-            if "C" in comb.atoms.keys() and comb.atoms["C"]==3 and ("H" not in comb.atoms.keys() or ("H" in comb.atoms.keys() and comb.atoms["H"] in [1,2,3,4,5,6,7,8,9])):
-                combs.append(comb)
-
-    if useCIsotopePatternValidation==2:
-        print "The following labeling configurations are used:"
-        for comb in combs:
-            print comb
-
-
-
     rules=[
-        PresenceRule(otherIsotopolog="[13C]-2", minIntensity=intensityThres, mustBePresent=True, ratioWindows={"X": [0.1, 3]}),
-        PresenceRule(otherIsotopolog="[13C]-4", minIntensity=intensityThres, mustBePresent=True, ratioWindows={"X": [0.1, 3]}),
-        PresenceRule(otherIsotopolog="[13C]-6", minIntensity=intensityThres, mustBePresent=True, ratioWindows={"X": [0.1, 3]}),
-        PresenceRule(otherIsotopolog="[13C]-8", minIntensity=intensityThres, mustBePresent=True, ratioWindows={"X": [0.1, 3]}),
-        PresenceRule(otherIsotopolog="[13C]-1", minIntensity=intensityThres, mustBePresent=False, ratioWindows={"X": [0.01, 0.5], "[13C]-2": [0.01, 0.8]}),
-        PresenceRule(otherIsotopolog="[13C]-3", minIntensity=intensityThres, mustBePresent=False, ratioWindows={"X": [0.01, 0.5], "[13C]-4": [0.01, 0.8]}),
-        PresenceRule(otherIsotopolog="[13C]-5", minIntensity=intensityThres, mustBePresent=False, ratioWindows={"X": [0.01, 0.5], "[13C]-6": [0.01, 0.8]}),
-        PresenceRule(otherIsotopolog="[13C]-7", minIntensity=intensityThres, mustBePresent=False, ratioWindows={"X": [0.01, 0.5], "[13C]-8": [0.01, 0.8]}),
-        PresenceRule(otherIsotopolog="[13C]1",  minIntensity=intensityThres, mustBePresent=False, ratioWindows={"X": [0.0, 0.01]})
+        PresenceRule(otherIsotopolog="[13C]-2",  minIntensity=intensityThres, mustBePresent=True, verifyChromPeakSimilarity=True,   ratioWindows={"X": [0.1, 3]}),
+        PresenceRule(otherIsotopolog="[13C]-4",  minIntensity=intensityThres, mustBePresent=True, verifyChromPeakSimilarity=True,   ratioWindows={"X": [0.1, 3]}),
+        PresenceRule(otherIsotopolog="[13C]-6",  minIntensity=intensityThres, mustBePresent=True, verifyChromPeakSimilarity=True,   ratioWindows={"X": [0.1, 3]}),
+        PresenceRule(otherIsotopolog="[13C]-8",  minIntensity=intensityThres, mustBePresent=True, verifyChromPeakSimilarity=True,   ratioWindows={"X": [0.1, 3]}),
+        PresenceRule(otherIsotopolog="[13C]-10", minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.0, 10]}),
+        PresenceRule(otherIsotopolog="[13C]-12", minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.0, 10]}),
+        PresenceRule(otherIsotopolog="[13C]-1",  minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-2": [0.01, 0.8]}),
+        PresenceRule(otherIsotopolog="[13C]-3",  minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-4": [0.01, 0.8]}),
+        PresenceRule(otherIsotopolog="[13C]-5",  minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-6": [0.01, 0.8]}),
+        PresenceRule(otherIsotopolog="[13C]-7",  minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-8": [0.01, 0.8]}),
+        AbsenceRule (otherIsotopolog="[13C]1",   maxRatio=0.01)
     ]
-
-
+    ruleMatcher=RuleMatcher(rules, ppm=ppm, log=False)
 
     # iterate over all MS scans (lvl. 1)
     curScanIndex=0
@@ -160,7 +137,7 @@ def matchPartners(mzXMLData, forFile,
 
                     if reportFunction is not None:
                         reportFunction((curScan.retention_time / 60. - startTime) / scanRTRange,
-                                       "RT %.2f" % (curScan.retention_time / 60.))
+                                       "FilterLine: %s, RT %.2f" % (filterLine, curScan.retention_time / 60.))
 
                     dontUsePeakIndices = []
 
@@ -216,7 +193,7 @@ def matchPartners(mzXMLData, forFile,
                                     if not skipOtherLoadings:
                                         xOffset = oriXOffset / float(curLoading)
                                         cValidationOffset = oriCValidationOffset / float(curLoading)
-                                        useCIsotopePatternValidation=3
+
                                         # Isotope pattern validation (useCValidation == 0)
                                         # It is tested, if the expected isotope patterns
                                         # separate for the native and labelled metabolite follow a theoretical pattern
@@ -226,7 +203,7 @@ def matchPartners(mzXMLData, forFile,
                                         # |||                  |||
                                         # Necessary mainly for 13C-labelling with mirror-symmetric isotope patterns
                                         # NOTE: - Approach is and should mainly be used for 13C-labelling
-                                        if useCIsotopePatternValidation == 0:
+                                        if useCIsotopePatternValidation == 1:
                                             # region
                                             # (0.) verify that peak is M and not something else (e.g. M+1, M+1...)
                                             ## TODO improve me. Use seven golden rules or the number of carbon atoms
@@ -287,14 +264,14 @@ def matchPartners(mzXMLData, forFile,
                                                         if peakCountLeft == 1 and peakCountRight == 1:
                                                             curPeakDetectedIonPairs.append(
                                                                 mzFeature(mz=curPeakmz,
-                                                                          lmz=labPeakmz,
-                                                                          tmz=xCount * cValidationOffset,
-                                                                          xCount=xCount,
+                                                                          similarityString="[13C]%d" % xCount,
                                                                           scanIndex=curScanIndex,
                                                                           loading=curLoading,
                                                                           nIntensity=curPeakIntensity,
-                                                                          lIntensity=labPeakIntensity,
-                                                                          ionMode=ionMode))
+                                                                          ionMode=ionMode,
+
+                                                                          type="pair",
+                                                                          otherIsotopologs={"[13C]%d"%xCount: Bunch(mzInc=xCount * oriCValidationOffset, xCount=xCount, lIntensity=labPeakIntensity)}))
 
                                                             skipOtherLoadings = True
                                                             continue
@@ -354,14 +331,14 @@ def matchPartners(mzXMLData, forFile,
                                                         # for further processing
                                                         curPeakDetectedIonPairs.append(
                                                             mzFeature(mz=curPeakmz,
-                                                                      lmz=labPeakmz,
-                                                                      tmz=xCount * cValidationOffset,
-                                                                      xCount=xCount,
+                                                                      similarityString="[13C]%d" % xCount,
                                                                       scanIndex=curScanIndex,
                                                                       loading=curLoading,
                                                                       nIntensity=curPeakIntensity,
-                                                                      lIntensity=labPeakIntensity,
-                                                                      ionMode=ionMode))
+                                                                      ionMode=ionMode,
+
+                                                                      type="pair"),
+                                                                      otherIsotopologs={"[13C]%d"%xCount: Bunch(mzInc=xCount * oriCValidationOffset, xCount=xCount, lIntensity=labPeakIntensity)})
 
                                                         skipOtherLoadings = True
                                                         # endregion
@@ -383,7 +360,7 @@ def matchPartners(mzXMLData, forFile,
                                         # Requires: - a high resolution and separation of different isotoplogs (especially carbon)
                                         # EXPERIMENTAL: has not been tested with real data (no N or S labelled sample material
                                         #               was available)
-                                        if useCIsotopePatternValidation == 1:
+                                        if useCIsotopePatternValidation == 0:
                                             #region
                                             # (0.) verify that peak is M and not something else (e.g. M+1, M+1...)
                                             ## TODO improve me. Use seven golden rules or the number of carbon atoms
@@ -432,14 +409,14 @@ def matchPartners(mzXMLData, forFile,
                                                         if peakCountLeft == 1 and peakCountRight == 1:
                                                             curPeakDetectedIonPairs.append(
                                                                 mzFeature(mz=curPeakmz,
-                                                                          lmz=labPeakmz,
-                                                                          tmz=xCount * xOffset,
-                                                                          xCount=xCount,
+                                                                          similarityString="[%s]%d"%(labellingIsotopeB, xCount),
                                                                           scanIndex=curScanIndex,
                                                                           loading=curLoading,
                                                                           nIntensity=curPeakIntensity,
-                                                                          lIntensity=labPeakIntensity,
-                                                                          ionMode=ionMode))
+                                                                          ionMode=ionMode,
+
+                                                                          type="pair/carbonPatternVerification",
+                                                                          otherIsotopologs={labellingIsotopeB: Bunch(mzInc=xCount * xOffset, xCount=xCount, lIntensity=labPeakIntensity)}))
 
                                                             skipOtherLoadings = True
                                                             continue
@@ -466,31 +443,18 @@ def matchPartners(mzXMLData, forFile,
                                                         else:
                                                             ratioL=isoLabPeakIntensity/labPeakIntensity
                                                         # 2. check if the observed M'+1/M' ratio and the M+1/M ratio are approximately equal
-                                                        if (ratioN!=None and ratioL!=None) and abs(ratioN-ratioL)<=intensityErrorL:
+                                                        if ( (ratioN!=None and ratioL!=None) and abs(ratioN-ratioL)<=intensityErrorL ) or \
+                                                           ( lowAbundanceIsotopeCutoff and (ratioN==None or ratioL==None) ):
                                                             curPeakDetectedIonPairs.append(
                                                                 mzFeature(mz=curPeakmz,
-                                                                          lmz=labPeakmz,
-                                                                          tmz=xCount * xOffset,
-                                                                          xCount=xCount,
+                                                                          similarityString="[%s]%d" % (labellingIsotopeB, xCount),
                                                                           scanIndex=curScanIndex,
                                                                           loading=curLoading,
                                                                           nIntensity=curPeakIntensity,
-                                                                          lIntensity=labPeakIntensity,
-                                                                          ionMode=ionMode))
+                                                                          ionMode=ionMode,
 
-                                                            skipOtherLoadings = True
-                                                            continue
-                                                        elif lowAbundanceIsotopeCutoff and (ratioN==None or ratioL==None):
-                                                            curPeakDetectedIonPairs.append(
-                                                                mzFeature(mz=curPeakmz,
-                                                                          lmz=labPeakmz,
-                                                                          tmz=xCount * xOffset,
-                                                                          xCount=xCount,
-                                                                          scanIndex=curScanIndex,
-                                                                          loading=curLoading,
-                                                                          nIntensity=curPeakIntensity,
-                                                                          lIntensity=labPeakIntensity,
-                                                                          ionMode=ionMode))
+                                                                          type="pair",
+                                                                          otherIsotopologs={labellingIsotopeB: Bunch(mzInc=xCount * xOffset, xCount=xCount, lIntensity=labPeakIntensity)}))
 
                                                             skipOtherLoadings = True
                                                             continue
@@ -498,110 +462,10 @@ def matchPartners(mzXMLData, forFile,
 
 
 
-                                        # labeling patterns derived from one or more labeling-elements (e.g. 13C and D)
-                                        # Currently, onle the m/z delta is checked but no isotopolog distribution
-                                        # E.g. [13C]3D3
-                                        # |  <-- [13C]3D3 -->  |
-                                        # ||                  ||
-                                        # |||                ||||
-                                        # NOTE: currently, the labeling elements must be defined in the code
-                                        if useCIsotopePatternValidation == 2:
-                                            # find M+1 peak
-                                            isoM_p1 = curScan.findMZ(curPeakmz + cValidationOffset / curLoading, ppm,
-                                                                     start=currentPeakIndex)
-                                            isoM_p1 = curScan.getMostIntensePeak(isoM_p1[0], isoM_p1[1])
-                                            intIsoM_p1 = 0
-                                            if isoM_p1 != -1:
-                                                intIsoM_p1 = curScan.intensity_list[isoM_p1]
-
-                                            isoM_m1 = curScan.findMZ(curPeakmz - cValidationOffset / curLoading, ppm,
-                                                                     start=currentPeakIndex)
-                                            isoM_m1 = curScan.getMostIntensePeak(isoM_m1[0], isoM_m1[1])
-                                            intIsoM_m1 = 0
-                                            if isoM_m1 != -1:
-                                                intIsoM_m1 = curScan.intensity_list[isoM_m1]
-
-                                            if intIsoM_p1 < curPeakIntensity and intIsoM_m1 < curPeakIntensity and (
-                                                        isoM_p1 != -1 or peakCountLeft == 1 or lowAbundanceIsotopeCutoff):
-                                                # test certain number of labelled carbon atoms
-
-                                                for comb in combs:
-                                                    # find corresponding M' peak
-                                                    isoM_pX = curScan.findMZ(curPeakmz + comb.mzdelta / curLoading, ppm,
-                                                                             start=currentPeakIndex)
-                                                    isoM_pX = curScan.getMostIntensePeak(isoM_pX[0], isoM_pX[1],
-                                                                                         intensityThres)
-                                                    if isoM_pX != -1:
-
-                                                        labPeakmz = curScan.mz_list[isoM_pX]
-                                                        labPeakIntensity = curScan.intensity_list[isoM_pX]
-
-                                                        # (1.) check if M' and M ratio are as expected
-                                                        if False:
-                                                            rat = curPeakIntensity / labPeakIntensity
-                                                            if minRatio <= rat <= maxRatio:
-                                                                pass  ## ratio check passed
-                                                            else:
-                                                                continue  ## ratio check not passed
-
-                                                        # find M'-1 peak
-                                                        isoM_pXm1 = curScan._findMZGeneric(curPeakmz + (
-                                                        comb.mzdelta - 1.00628 * (
-                                                        1. + curPeakmz * ppm / 1000000)) / curLoading, curPeakmz + (
-                                                                                           comb.mzdelta - 1.00335 * (
-                                                                                           1. - curPeakmz * ppm / 1000000)) / curLoading)
-                                                        isoM_pXm1 = curScan.getMostIntensePeak(isoM_pXm1[0],
-                                                                                               isoM_pXm1[1])
-
-                                                        if isoM_pXm1 != -1:
-                                                            isoPeakIntensity = curScan.intensity_list[isoM_pXm1]
-                                                            rat = isoPeakIntensity / labPeakIntensity
-
-                                                            if rat <= 0.75:
-                                                                pass
-                                                            else:
-                                                                continue
-
-                                                        # find M'+1 peak
-                                                        isoM_pXp1 = curScan._findMZGeneric(curPeakmz + (
-                                                        comb.mzdelta + 1.00335 * (
-                                                        1. - curPeakmz * ppm / 1000000)) / curLoading, curPeakmz + (
-                                                                                           comb.mzdelta + 1.00628 * (
-                                                                                           1. + curPeakmz * ppm / 1000000)) / curLoading)
-                                                        isoM_pXp1 = curScan.getMostIntensePeak(isoM_pXp1[0],
-                                                                                               isoM_pXp1[1])
-
-                                                        if isoM_pXp1 != -1:
-                                                            isoPeakIntensity = curScan.intensity_list[isoM_pXp1]
-                                                            rat = isoPeakIntensity / labPeakIntensity
-
-                                                            if rat <= 0.9:
-                                                                pass
-                                                            else:
-                                                                continue
-
-                                                        # All verification criteria are passed, store the ion signal pair
-                                                        # for further processing
-                                                        curPeakDetectedIonPairs.append(
-                                                            mzFeature(mz=curPeakmz,
-                                                                      lmz=curScan.mz_list[isoM_pX],
-                                                                      tmz=comb.mzdelta / curLoading,
-                                                                      xCount=fT.flatToString(comb.atoms),
-                                                                      scanIndex=curScanIndex,
-                                                                      loading=curLoading,
-                                                                      nIntensity=curPeakIntensity,
-                                                                      lIntensity=labPeakIntensity,
-                                                                      ionMode=ionMode))
-
-                                                        skipOtherLoadings = True
-                                                        # endregion
-
-
-
                                         # labeling patters derived from small tracer compounds (e.g. 13C)
                                         # Idea for the detection has been developed by Bernhard Seidl for the detecton of polyketides
-                                        # E.g. tracer is [13C]2
                                         #
+                                        # E.g. tracer is [13C]2
                                         # |
                                         # |
                                         # |   |
@@ -609,21 +473,28 @@ def matchPartners(mzXMLData, forFile,
                                         # | | |   |   |
                                         # | | | | |   |   |
                                         # | | | | | | | | |
-                                        # NOTE: the isotope patterns is strange
+                                        #
+                                        # E.g. [13C]3D3
+                                        # |  <-- [13C]3D3 -->  |
+                                        # ||                  ||
+                                        # |||                ||||
+                                        #
+                                        # NOTE: these isotope patterns are strange
                                         if useCIsotopePatternValidation == 3:
-                                            rulesValid, noNeedToCheckFurther=matchIsoPatternRules(curScan, currentPeakIndex, rules, curLoading, ppm)
+
+                                            rulesValid, noNeedToCheckFurther=ruleMatcher.matchIsoPatternRules(curScan, currentPeakIndex, curLoading)
 
                                             if rulesValid:
                                                 curPeakDetectedIonPairs.append(
                                                     mzFeature(mz=curPeakmz,
-                                                              lmz=curPeakmz,
-                                                              tmz=0,
-                                                              xCount=0,
+                                                              similarityString="CP",
                                                               scanIndex=curScanIndex,
                                                               loading=curLoading,
                                                               nIntensity=curPeakIntensity,
-                                                              lIntensity=curPeakIntensity,
-                                                              ionMode=ionMode))
+                                                              ionMode=ionMode,
+
+                                                              type="CP",
+                                                              otherIsotopologs=ruleMatcher.getChromatographicPeaks()))
 
                                                 dontUsePeakIndices.extend(noNeedToCheckFurther)
 

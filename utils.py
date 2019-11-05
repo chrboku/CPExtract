@@ -400,7 +400,7 @@ class Bunch:
         self.__dict__.update(kwds)
 
     def __str__(self):
-        return "(%s)"%(",".join(["%s:%s"%(key, str(val)) for key, val in self.__dict__.items()]))
+        return "Bunch: (%s)"%(",".join(["%s:%s"%(key, str(val)) for key, val in self.__dict__.items()]))
 
     def __repr__(self):
         return self.__str__()
@@ -435,125 +435,46 @@ class Bunch:
 
 
 # class for storing a detected chromatographic peak pair.
-# Thus, one ChromPeakPair instance stores two chromatographic peaks of a native and a labelled metabolite ion.
+# Thus, one ChromPeakFeature instance stores two chromatographic peaks of a native and a labelled metabolite ion.
 # Member variables are only set, if provides as parameters
-class ChromPeakPair:
-    def __init__(self, id=-1, fGroupID=-1, eicID=-1, massSpectrumID=-1, assignedName=-1, tracer=-1, tracerName="",
-                 mz=-1, lmz=-1, xCount=-1, loading=-1, ionMode="", NPeakCenter=-1, NPeakCenterMin=-1, NPeakScale=-1,
-                 NSNR=-1, NPeakArea=-1, NPeakAbundance=-1, LPeakCenter=-1, LPeakCenterMin=-1, LPeakScale=-1, LSNR=-1,
-                 LPeakArea=-1, LPeakAbundance=-1, heteroIsotoplogues={}, assignedMZs=[], comments=[], artificialEICLShift=0, **args):
-        argsUsed = 0
+class ChromPeakFeature:
+    def __init__(self, id=-1, fGroupID=-1, assignedName=-1,
+                 mz=-1, loading=-1, ionMode="", similarityString="",
+                 PeakCenter=-1, PeakCenterMin=-1, PeakScale=-1, SNR=-1, PeakArea=-1, PeakAbundance=-1,
+                 heteroIsotoplogs={}, assignedMZs=[], comments=[],
+                 artificialEICLShift=0, foundMatches=None):
 
         self.id = id
         self.fGroupID = fGroupID
-        self.eicID = eicID
-        self.massSpectrumID = massSpectrumID
         self.assignedName = assignedName
-        self.tracer = tracer
-        self.tracerName = tracerName
 
         self.mz = mz
-        self.lmz = lmz
-        self.xCount = xCount
         self.loading = loading
         self.ionMode = ionMode
+        if similarityString == None:
+            similarityString = ""
+        self.similarityString = similarityString
 
-        self.NPeakCenter = NPeakCenter
-        self.NPeakCenterMin = NPeakCenterMin
-        self.NPeakScale = NPeakScale
-        self.NSNR = NSNR
-        self.NPeakArea = NPeakArea
-        self.NPeakAbundance = NPeakAbundance
+        self.PeakCenter = PeakCenter
+        self.PeakCenterMin = PeakCenterMin
+        self.PeakScale = PeakScale
+        self.SNR = SNR
+        self.PeakArea = PeakArea
+        self.PeakAbundance = PeakAbundance
 
-        self.LPeakCenter = LPeakCenter
-        self.LPeakCenterMin = LPeakCenterMin
-        self.LPeakScale = LPeakScale
-        self.LSNR = LSNR
-        self.LPeakArea = LPeakArea
-        self.LPeakAbundance = LPeakAbundance
-
-        self.heteroIsotopologues = heteroIsotoplogues or {}
+        self.heteroIsotoplogs = heteroIsotoplogs or {}
         self.assignedMZs = assignedMZs or []
-
         self.comments = comments
-
         self.artificialEICLShift = artificialEICLShift
 
-        if args.has_key("tmz"):
-            self.tmz = args["tmz"]
-            argsUsed += 1
+        if foundMatches == None:
+            foundMatches = []
+        self.foundMatches=foundMatches
 
-        if args.has_key("peaksCorr"):
-            self.peaksCorr = args["peaksCorr"]
-            argsUsed += 1
-        if args.has_key("silRatios"):
-            self.silRatios = args["silRatios"]
-            argsUsed += 1
-        if args.has_key("peaksRatio"):
-            self.peaksRatio = args["peaksRatio"]
-            argsUsed += 1
-
-        if args.has_key("NXIC"):
-            self.NXIC = args["NXIC"]
-            argsUsed += 1
-        if args.has_key("LXIC"):
-            self.LXIC = args["LXIC"]
-            argsUsed += 1
-        if args.has_key("NXICSmoothed"):
-            self.NXICSmoothed = args["NXICSmoothed"]
-            argsUsed += 1
-        if args.has_key("LXICSmoothed"):
-            self.LXICSmoothed = args["LXICSmoothed"]
-            argsUsed += 1
-        if args.has_key("times"):
-            self.times = args["times"]
-            argsUsed += 1
-
-        if args.has_key("fDesc"):
-            self.fDesc = args["fDesc"]
-            argsUsed += 1
-        if args.has_key("adducts"):
-            self.adducts = args["adducts"]
-            argsUsed += 1
-        if args.has_key("heteroAtomsFeaturePairs"):
-            self.heteroAtomsFeaturePairs = args["heteroAtomsFeaturePairs"]
-            argsUsed += 1
-        if args.has_key("Ms"):
-            self.Ms = args["Ms"]
-            argsUsed +=1
-        if args.has_key("heteroAtoms"):
-            self.heteroAtoms = args["heteroAtoms"]
-            argsUsed += 1
-
-        if args.has_key("NBorderLeft"):
-            self.NBorderLeft = args["NBorderLeft"]
-            argsUsed += 1
-        if args.has_key("NBorderRight"):
-            self.NBorderRight = args["NBorderRight"]
-            argsUsed += 1
-        if args.has_key("LBorderLeft"):
-            self.LBorderLeft = args["LBorderLeft"]
-            argsUsed += 1
-        if args.has_key("LBorderRight"):
-            self.LBorderRight = args["LBorderRight"]
-            argsUsed += 1
-
-        if args.has_key("isotopeRatios"):
-            self.isotopeRatios = args["isotopeRatios"]
-            argsUsed += 1
-        if args.has_key("mzDiffErrors"):
-            self.mzDiffErrors = args["mzDiffErrors"]
-            argsUsed += 1
-
-        if args.has_key("correlationsToOthers"):
-            self.correlationsToOthers = args["correlationsToOthers"]
-            argsUsed += 1
-
-        assert argsUsed == len(args), "Not all agruments used %d %d" % (argsUsed, len(args))
 
 
     def __str__(self):
-        return "chrompeak: %f, %d (%f min), %d" % (self.mz, self.NPeakCenter, self.NPeakCenterMin / 60., self.id)
+        return "ChromPeakFeature: %f, %d (%f min), %d" % (self.mz, self.NPeakCenter, self.NPeakCenterMin / 60., self.id)
 
 
 #Faktorial of x

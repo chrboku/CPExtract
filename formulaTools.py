@@ -207,8 +207,20 @@ class formulaTools:
         return -1
 
     # parses a formula into an element-dictionary
-    def parseFormula(self, formula):
-        return self._parseStruct("(" + formula.replace(" ", "") + ")", 0)[1]
+    def parseFormula(self, formula, keepOnlyMainIsotopes=False):
+        elems=self._parseStruct("(" + formula.replace(" ", "") + ")", 0)[1]
+
+
+        if keepOnlyMainIsotopes:
+            e2={}
+            for k, v in elems.items():
+                if not self.isIso(k):
+                    e2[k]=v
+            elems=e2
+
+        return elems
+
+
 
     # method determines if a given element represent an isotope other the the main isotope of a given element
     # e.g. isIso("13C"): True; isIso("12C"): False

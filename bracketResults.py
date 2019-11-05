@@ -15,8 +15,8 @@ from reportlab.graphics import renderPDF
 
 from XICAlignment import XICAlignment
 
-from utils import ChromPeakPair, getSubGraphs, Bunch, SQLInsert, natSort, get_main_dir, getSubGraphsFromDictDict, CallBackMethod
-from runIdentification import ChromPeakPair, getDBSuffix
+from utils import ChromPeakFeature, getSubGraphs, Bunch, SQLInsert, natSort, get_main_dir, getSubGraphsFromDictDict, CallBackMethod
+from runIdentification import ChromPeakFeature, getDBSuffix
 from TableUtils import TableUtils
 from MZHCA import HierarchicalClustering, cutTreeSized
 
@@ -270,12 +270,12 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
                                     "c.NPeakAbundance, c.LPeakAbundance, c.NBorderLeft, c.NBorderRight, c.LBorderLeft, c.LBorderRight "
                                     "FROM chromPeaks c WHERE c.ionMode='%s' AND c.xcount='%s' and c.Loading=%d"%(ionMode, xCount, cLoading)):
                                 try:
-                                    cp = ChromPeakPair(id=row[0], tracer=row[1], NPeakCenter=row[2], NPeakCenterMin=row[3],
-                                                   NPeakScale=row[4], NSNR=row[5], NPeakArea=row[6], mz=row[7], lmz=row[8], tmz=row[9], xCount=str(row[10]),
-                                                   LPeakCenter=row[11], LPeakCenterMin=row[12], LPeakScale=row[13], LSNR=row[14],
-                                                   LPeakArea=row[15], loading=row[16], fGroupID=row[17], tracerName=row[18],
-                                                   ionMode=str(row[19]), NPeakAbundance=float(row[20]), LPeakAbundance=float(row[21]),
-                                                   NBorderLeft=float(row[22]), NBorderRight=float(row[23]), LBorderLeft=float(row[24]), LBorderRight=float(row[25]))
+                                    cp = ChromPeakFeature(id=row[0], tracer=row[1], NPeakCenter=row[2], NPeakCenterMin=row[3],
+                                                          NPeakScale=row[4], NSNR=row[5], NPeakArea=row[6], mz=row[7], lmz=row[8], tmz=row[9], xCount=str(row[10]),
+                                                          LPeakCenter=row[11], LPeakCenterMin=row[12], LPeakScale=row[13], LSNR=row[14],
+                                                          LPeakArea=row[15], loading=row[16], fGroupID=row[17], tracerName=row[18],
+                                                          ionMode=str(row[19]), NPeakAbundance=float(row[20]), LPeakAbundance=float(row[21]),
+                                                          NBorderLeft=float(row[22]), NBorderRight=float(row[23]), LBorderLeft=float(row[24]), LBorderRight=float(row[25]))
 
                                     assert cp.ionMode in ionModes.keys()
                                     res.featurePairs.append(cp)
@@ -1119,8 +1119,8 @@ def calculateMetaboliteGroups(file="./results.tsv", groups=[], eicPPM=10., maxAn
             groups=defaultdict(list)
             for row in table.getData(cols=["Num", "OGroup", "MZ", "Ionisation_Mode", "Charge", "Ion", "Xn", "Loss", "M"]):
                 num, ogrp, mz, ionMode, loading, adducts, xCount, fDesc, ms=row
-                groups[ogrp].append(ChromPeakPair(id=num, fGroupID=ogrp, mz=mz, ionMode=ionMode, loading=loading, adducts=[], heteroAtomsFeaturePairs=[],
-                                                  xCount=xCount, fDesc=[]))
+                groups[ogrp].append(ChromPeakFeature(id=num, fGroupID=ogrp, mz=mz, ionMode=ionMode, loading=loading, adducts=[], heteroAtomsFeaturePairs=[],
+                                                     xCount=xCount, fDesc=[]))
 
             for ogrp in groups.keys():
                 chromPeaks={}

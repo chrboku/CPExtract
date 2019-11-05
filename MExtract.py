@@ -322,7 +322,7 @@ from mePyGuis.TracerEdit import tracerEdit
 from formulaTools import formulaTools, getIsotopeMass, getElementOfIsotope
 #</editor-fold>
 #<editor-fold desc="### Various Imports">
-from utils import natSort, ChromPeakPair, getNormRatio, mean, SampleGroup
+from utils import natSort, ChromPeakFeature, getNormRatio, mean, SampleGroup
 from utils import Bunch, SQLInsert, SQLSelectAsObject, get_main_dir, smoothDataSeries, sd
 from utils import FuncProcess, CallBackMethod
 import HCA_general
@@ -2143,7 +2143,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                               QtGui.QMessageBox.Ok)
 
             if sett.contains("tracerConfiguration") and self.labellingExperiment==TRACER:
-                self.configuredTracers = loads(str(base64.b64decode(sett.value("tracerConfiguration").toString())))
+                self.configuredTracer = loads(str(base64.b64decode(sett.value("tracerConfiguration").toString())))
 
             if sett.contains("LabellingElementA") and self.labellingExperiment==METABOLOME:
                 self.ui.isotopeAText.setText(str(sett.value("LabellingElementA").toString()))
@@ -2416,7 +2416,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             sett.setValue("ExperimentType", "TracExtract" if self.labellingExperiment==TRACER else ("FML" if self.labellingExperiment==METABOLOME else "CUSTOMPATTERN"))
 
             if self.labellingExperiment==TRACER:
-                sett.setValue("tracerConfiguration", base64.b64encode(dumps(self.configuredTracers)))
+                sett.setValue("tracerConfiguration", base64.b64encode(dumps(self.configuredTracer)))
             if self.labellingExperiment==METABOLOME:
                 sett.setValue("LabellingElementA", self.ui.isotopeAText.text())
                 sett.setValue("IsotopicAbundanceA", self.ui.isotopicAbundanceA.value())
@@ -2759,9 +2759,10 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                   useRatio=self.ui.useRatio.isChecked(),
                                   minRatio=self.ui.minRatio.value(),
                                   maxRatio=self.ui.maxRatio.value(),
-                                  useCIsotopePatternValidation=int(str(self.ui.useCValidation.checkState())) if self.labellingExperiment!=CUSTOMPATTERN else 2,
-                                  configuredTracers=self.configuredTracers, startTime=self.ui.scanStartTime.value(),
-                                  stopTime=self.ui.scanEndTime.value(), maxLoading=self.ui.maxLoading.value(),
+                                  useCIsotopePatternValidation=3 if self.labellingExperiment==CUSTOMPATTERN else 2 if self.labellingExperiment==TRACER else int(str(self.ui.useCValidation.checkState())),
+                                  configuredTracer=self.configuredTracer,
+                                  startTime=self.ui.scanStartTime.value(), stopTime=self.ui.scanEndTime.value(),
+                                  maxLoading=self.ui.maxLoading.value(),
                                   xCounts=str(self.ui.xCountSearch.text()),
                                   ppm=self.ui.ppmRangeIdentification.value(),
                                   isotopicPatternCountLeft=self.ui.isotopePatternCountA.value(),
@@ -2798,7 +2799,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                   hAMinScans=self.ui.hAMinScans.value(), adducts=self.adducts, elements=self.elementsForNL,
                                   heteroAtoms=self.heteroElements,
                                   simplifyInSourceFragments=self.ui.checkBox_simplifyInSourceFragments.isChecked(),
-                                  lock=lock, queue=queue, pID=i + 1,
+                                  lock=lock, queue=queue, pID=i+1,
                                   rVersion=getRVersion(), meVersion="MetExtract (%s)" % MetExtractVersion) for i in
                 range(len(files))])
 
@@ -2949,7 +2950,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                       minRatio=self.ui.minRatio.value(),
                                                       maxRatio=self.ui.maxRatio.value(),
                                                       useCIsotopePatternValidation=int(str(self.ui.useCValidation.checkState())) if self.labellingExperiment != CUSTOMPATTERN else 2,
-                                                      configuredTracers="[%s]"%",".join([str(t) for t in self.configuredTracers]), startTime=self.ui.scanStartTime.value(),
+                                                      configuredTracer=self.configuredTracer, startTime=self.ui.scanStartTime.value(),
                                                       stopTime=self.ui.scanEndTime.value(), maxLoading=self.ui.maxLoading.value(),
                                                       xCounts=str(self.ui.xCountSearch.text()),
                                                       ppm=self.ui.ppmRangeIdentification.value(),
@@ -3127,8 +3128,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                                 useRatio=self.ui.useRatio.isChecked(),
                                                                 minRatio=self.ui.minRatio.value(),
                                                                 maxRatio=self.ui.maxRatio.value(),
-                                                                useCIsotopePatternValidation=int(str(self.ui.useCValidation.checkState())) if self.labellingExperiment != CUSTOMPATTERN else 2,
-                                                                configuredTracers=self.configuredTracers, startTime=self.ui.scanStartTime.value(),
+                                                                useCIsotopePatternValidation=3 if self.labellingExperiment == CUSTOMPATTERN else 2 if self.labellingExperiment == TRACER else int(str(self.ui.useCValidation.checkState())),
+                                                                configuredTracer=self.configuredTracer, startTime=self.ui.scanStartTime.value(),
                                                                 stopTime=self.ui.scanEndTime.value(), maxLoading=self.ui.maxLoading.value(),
                                                                 xCounts=str(self.ui.xCountSearch.text()),
                                                                 isotopicPatternCountLeft=self.ui.isotopePatternCountA.value(),
@@ -3880,13 +3881,13 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     except Exception:
                         pass  ## double labeling experiment. That's fine
 
-                    xp = ChromPeakPair(NPeakCenter=int(row.NPeakCenter), LPeakScale=float(row.LPeakScale), LPeakCenter=int(row.LPeakCenter),
-                                   NPeakScale=float(row.NPeakScale), NSNR=0, NPeakArea=-1, mz=float(row.mz), lmz=float(row.lmz), xCount=row.xcount,
-                                   NBorderLeft=float(row.NBorderLeft), NBorderRight=float(row.NBorderRight),
-                                   LBorderLeft=float(row.LBorderLeft), LBorderRight=float(row.LBorderRight),
-                                   NPeakCenterMin=float(row.NPeakCenterMin), LPeakCenterMin=float(row.LPeakCenterMin), eicID=int(row.eicID), massSpectrumID=int(row.massSpectrumID),
-                                   assignedName=str(row.assignedName), id=int(row.cpID), loading=int(row.Loading), peaksCorr=float(row.peaksCorr), peaksRatio=float(row.peaksRatio),
-                                   tracer=str(row.tracerName), ionMode=str(row.ionMode), heteroAtoms=heteroAtoms, adducts=adducts, fDesc=fDesc, assignedMZs=assignedMZs)
+                    xp = ChromPeakFeature(NPeakCenter=int(row.NPeakCenter), LPeakScale=float(row.LPeakScale), LPeakCenter=int(row.LPeakCenter),
+                                          NPeakScale=float(row.NPeakScale), NSNR=0, NPeakArea=-1, mz=float(row.mz), lmz=float(row.lmz), xCount=row.xcount,
+                                          NBorderLeft=float(row.NBorderLeft), NBorderRight=float(row.NBorderRight),
+                                          LBorderLeft=float(row.LBorderLeft), LBorderRight=float(row.LBorderRight),
+                                          NPeakCenterMin=float(row.NPeakCenterMin), LPeakCenterMin=float(row.LPeakCenterMin), eicID=int(row.eicID), massSpectrumID=int(row.massSpectrumID),
+                                          assignedName=str(row.assignedName), id=int(row.cpID), loading=int(row.Loading), peaksCorr=float(row.peaksCorr), peaksRatio=float(row.peaksRatio),
+                                          tracer=str(row.tracerName), ionMode=str(row.ionMode), heteroAtoms=heteroAtoms, adducts=adducts, fDesc=fDesc, assignedMZs=assignedMZs)
 
                     d = QtGui.QTreeWidgetItem(["%.5f"%xp.mz + " (/" + str(row.ionMode) + str(row.Loading) + ") ",
                                                "%.2f / %.2f" % (float(row.NPeakCenterMin) / 60., float(row.LPeakCenterMin) / 60.),
@@ -4000,15 +4001,15 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                         assignedMZs=loads(base64.b64decode(row.assignedMZs))
 
-                        xp = ChromPeakPair(NPeakCenter=int(row.NPeakCenter), loading=int(row.Loading), LPeakScale=float(row.LPeakScale),
-                                       LPeakCenter=int(row.LPeakCenter), NPeakScale=float(row.NPeakScale), NSNR=0, NPeakArea=-1,
-                                       mz=float(row.mz), lmz=float(row.lmz), xCount=row.xcount, NPeakCenterMin=float(row.NPeakCenterMin),
-                                       NBorderLeft=float(row.NBorderLeft), NBorderRight=float(row.NBorderRight),
-                                       LBorderLeft=float(row.LBorderLeft), LBorderRight=float(row.LBorderRight),
-                                       LPeakCenterMin=float(row.LPeakCenterMin), eicID=int(row.eicID), massSpectrumID=int(row.massSpectrumID),
-                                       assignedName=str(row.assignedName), id=int(row.cpID),
-                                       tracer=str(row.tracerName), ionMode=str(row.ionMode), adducts=adducts, heteroAtoms=heteroAtoms, assignedMZs=assignedMZs,
-                                       artificialEICLShift=int(row.artificialEICLShift))
+                        xp = ChromPeakFeature(NPeakCenter=int(row.NPeakCenter), loading=int(row.Loading), LPeakScale=float(row.LPeakScale),
+                                              LPeakCenter=int(row.LPeakCenter), NPeakScale=float(row.NPeakScale), NSNR=0, NPeakArea=-1,
+                                              mz=float(row.mz), lmz=float(row.lmz), xCount=row.xcount, NPeakCenterMin=float(row.NPeakCenterMin),
+                                              NBorderLeft=float(row.NBorderLeft), NBorderRight=float(row.NBorderRight),
+                                              LBorderLeft=float(row.LBorderLeft), LBorderRight=float(row.LBorderRight),
+                                              LPeakCenterMin=float(row.LPeakCenterMin), eicID=int(row.eicID), massSpectrumID=int(row.massSpectrumID),
+                                              assignedName=str(row.assignedName), id=int(row.cpID),
+                                              tracer=str(row.tracerName), ionMode=str(row.ionMode), adducts=adducts, heteroAtoms=heteroAtoms, assignedMZs=assignedMZs,
+                                              artificialEICLShift=int(row.artificialEICLShift))
                         xp.fDesc = str(row.fDesc)
                         xp.peaksCorr = float(row.peaksCorr)
                         xp.peaksRatio = float(row.peaksRatio)
@@ -7004,26 +7005,23 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
     def showTracerEditor(self):
         tracerDialog = tracerEdit()
-        tracerDialog.setTracers(deepcopy(self.configuredTracers))
+        tracerDialog.setTracer(deepcopy(self.configuredTracer))
         if tracerDialog.executeDialog() == QtGui.QDialog.Accepted:
-            self.lastOpenDir = tracerDialog.getOpenDir()
 
-            self.configuredTracers = tracerDialog.getTracers()
+            self.configuredTracer = tracerDialog.getTracer()
 
-            logging.info("Configured tracers:")
-            for tracer in self.configuredTracers:
-                logging.info(" * %s (%s/%s) ratio: %.2f (min. %.2f, max. %.2f)" % (tracer.name, tracer.isotopeA, tracer.isotopeB, tracer.monoisotopicRatio, tracer.monoisotopicRatio*tracer.maxRelNegBias, tracer.monoisotopicRatio*tracer.maxRelPosBias))
         self.updateTracerInfo()
 
     def updateTracerInfo(self):
-        if len(self.configuredTracers) == 0:
-            self.ui.tracerExperimentLabel.setText("No tracers configured")
+        if self.configuredTracer == None:
+            logging.info("Tracer: -")
+            self.ui.tracerExperimentLabel.setText("No tracer configured")
         else:
-            trcs = []
-            for tracer in self.configuredTracers:
-                trcs.append(
-                    " * %s (%s/%s)" % (tracer.name, tracer.isotopeA, tracer.isotopeB))
-            self.ui.tracerExperimentLabel.setText("\n\n".join(trcs))
+
+            logging.info("Configured tracer:")
+            logging.info(" * %s (%s) ratio: %.2f (min. %.2f, max. %.2f)" % (self.configuredTracer.name, self.configuredTracer.labeling, self.configuredTracer.monoisotopicRatio,
+                                                                               self.configuredTracer.maxRelNegBias, self.configuredTracer.maxRelPosBias))
+            self.ui.tracerExperimentLabel.setText(" * %s (%s)" % (self.configuredTracer.name, self.configuredTracer.labeling))
     #</editor-fold>
 
     def isotopeATextChanged(self, text):
@@ -7331,7 +7329,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         self.ui.useRatio.setChecked(False)
 
-        self.configuredTracers = []
+        self.configuredTracer = None
         self.updateTracerInfo()
         self.ui.setupTracers.clicked.connect(self.showTracerEditor)
 

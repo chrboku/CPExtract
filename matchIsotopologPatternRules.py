@@ -2,7 +2,7 @@ from formulaTools import formulaTools
 from utils import Bunch
 
 
-ruleChecker=formulaTools()
+_formulaTools=formulaTools()
 
 class Rule:
     def getAllRequiredIsotopologs(self):
@@ -11,13 +11,17 @@ class Rule:
     def check(self, isotopologDict, log=False):
         return False
 
+    def getChromatographicPeaks(self):
+        return []
+
 
 
 class PresenceRule(Rule):
-    def __init__(self, otherIsotopolog="[13C]2", minIntensity=10000, mustBePresent=True, ratioWindows={'X': [1/2., 2]}):
+    def __init__(self, otherIsotopolog="[13C]2", minIntensity=10000, mustBePresent=True, verifyChromPeakSimilarity=True, ratioWindows={'X': [1/2., 2]}):
         self.otherIsotopolog=otherIsotopolog
         self.minIntensity=minIntensity
         self.mustBePresent=mustBePresent
+        self.verifyChromPeakSimilarity=verifyChromPeakSimilarity
         self.ratioWindows=ratioWindows
 
 
@@ -32,7 +36,7 @@ class PresenceRule(Rule):
                 return True
 
         if self.mustBePresent and isotopologDict[self.otherIsotopolog].intensity<self.minIntensity:
-            return False
+            return True
 
         ratWinPassed=True
         for isotopolog, window in self.ratioWindows.items():
@@ -47,13 +51,19 @@ class PresenceRule(Rule):
 
         return ratWinPassed
 
+    def getChromatographicPeaks(self):
+        if self.verifyChromPeakSimilarity:
+            return [self.otherIsotopolog]
+        else:
+            return []
+
 
 
 
 class AbsenceRule(Rule):
-    def __init__(self, otherIsotopolog="[13C]-1", maxIntensity=10000):
+    def __init__(self, otherIsotopolog="[13C]-1", maxRatio=0.1):
         self.otherIsotopolog=otherIsotopolog
-        self.maxIntensity=maxIntensity
+        self.maxRatio=maxRatio
 
     def getAllRequiredIsotopologs(self):
         return [self.otherIsotopolog]
@@ -63,31 +73,43 @@ class AbsenceRule(Rule):
             return True
 
         if self.otherIsotopolog in isotopologDict.keys():
-            if isotopologDict[self.otherIsotopolog].intensity<self.maxIntensity:
+            if (isotopologDict[self.otherIsotopolog].intensity/isotopologDict["X"].intensity)<self.maxRatio:
                 return True
             else:
                 return False
 
 
 
-def matchIsoPatternRules(msScan, signalInd, rules, charge=1, ppm=5, log=False):
-    mz=msScan.mz_list[signalInd]
+class RuleMatcher:
 
-    isotopologDict={}
-    noNeedToCheckFurther=[]
+    def __init__(self, rules, ppm=5., log=False):
+        self.rules=rules
+        self.ppm=ppm
+        self.log=log
 
-    for rule in rules:
-        isos=rule.getAllRequiredIsotopologs()
-        for iso in isos:
+        self.isos={"X": 0}
+        for rule in self.rules:
+            for iso in rule.getAllRequiredIsotopologs():
+                if iso not in self.isos.keys():
+                    self.isos[iso]=_formulaTools.calcIsotopologOffsetWeight(_formulaTools.parseFormula(iso))
+
+
+    def matchIsoPatternRules(self, msScan, signalInd, charge=1):
+        mz=msScan.mz_list[signalInd]
+
+        isotopologDict={}
+        noNeedToCheckFurther=[]
+
+        for iso in self.isos.keys():
             if iso not in isotopologDict:
                 b=Bunch(isoInd=None, intensity=None, mz=None)
 
                 if iso=="X":
                     b.mz=mz
                 else:
-                    b.mz=mz+ruleChecker.calcIsotopologOffsetWeight(ruleChecker.parseFormula(iso))/charge
+                    b.mz=mz+self.isos[iso]/charge
 
-                bound=msScan.findMZ(b.mz, ppm)
+                bound=msScan.findMZ(b.mz, self.ppm)
                 ind=msScan.getMostIntensePeak(bound[0], bound[1])
 
                 if ind!=-1:
@@ -97,9 +119,17 @@ def matchIsoPatternRules(msScan, signalInd, rules, charge=1, ppm=5, log=False):
                     isotopologDict[iso]=b
                     noNeedToCheckFurther.append(ind)
 
-    passedRules=True
-    for rule in rules:
-        if passedRules:
-            passedRules=passedRules and rule.check(isotopologDict, log=log)
+        passedRules=True
+        for rule in self.rules:
+            if passedRules:
+                passedRules=passedRules and rule.check(isotopologDict, log=self.log)
 
-    return passedRules, noNeedToCheckFurther if passedRules else []
+        return passedRules, noNeedToCheckFurther if passedRules else []
+
+    def getChromatographicPeaks(self):
+        chromPeaks={}
+        for rule in self.rules:
+            for iso in rule.getChromatographicPeaks():
+                chromPeaks[iso]= Bunch(mzInc=_formulaTools.calcIsotopologOffsetWeight(_formulaTools.parseFormula(iso)), requiredChromPeak=True)
+
+        return chromPeaks

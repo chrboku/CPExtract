@@ -147,7 +147,6 @@ class GradientPeaks:
         for peak in peaks:
             ret.append(Bunch(peakIndex=peak.peakIndex, peakScale=(peak.peakRightFlank+peak.peakLeftFlank)/2, peakSNR=100, peakArea=peak.peakArea, peakLeftFlank=peak.peakLeftFlank, peakRightFlank=peak.peakRightFlank))
 
-
         return ret
 
 if __name__=="__main__":
