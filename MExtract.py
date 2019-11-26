@@ -3549,7 +3549,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             TableUtils.saveFile(table, resFileFull, cols=order)
 
-        shutil.copyfile(resFileFull, resFilePath + "/xxx_results__8_afterAnnotation.tsv")
+            shutil.copyfile(resFileFull, resFilePath + "/xxx_results__8_afterAnnotation.tsv")
 
 
 
@@ -3628,18 +3628,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.label_18.setEnabled(sta)
         self.ui.groupingRT.setEnabled(sta)
 
-    def processMultipleFilesChanged(self, sta):
-        self.ui.groupResults.setEnabled(sta)
-        self.ui.label_26.setEnabled(sta)
-        self.ui.groupPpm.setEnabled(sta)
-        self.ui.alignChromatograms.setEnabled(sta)
-        self.ui.label_18.setEnabled(sta)
-        self.ui.groupingRT.setEnabled(sta)
-        self.ui.integratedMissedPeaks.setEnabled(sta)
-        self.ui.convoluteResults.setEnabled(sta)
-        self.ui.label_20.setEnabled(sta)
-        self.ui.groupsSave.setEnabled(sta)
-        self.ui.groupsSelectFile.setEnabled(sta)
 
     def saveMZXMLChanged(self, sta):
         self.ui.wm_ia.setEnabled(sta)
@@ -3647,8 +3635,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.wm_imb.setEnabled(sta)
         self.ui.wm_ib.setEnabled(sta)
 
-    def procIndFilesChanges(self, sta):
-        self.ui.procIndFiles.setEnabled(sta)
 
     #<editor-fold desc="### visualisation of results of single sample">
     def closeCurrentOpenResultsFile(self):
@@ -3687,8 +3673,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         if self.openFileAsCurrentOpenResultsFile(b.file):
 
             it = QtGui.QTreeWidgetItem(["MZs"])
+            it.type = "MZs"
+            it.data=Bunch()
             self.ui.res_ExtractedData.addTopLevelItem(it)
-            it.myType = "MZs"
             count = 0
             children=[]
             pw=ProgressWrapper(pwCount=5)
@@ -3706,12 +3693,13 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 ## Parse raw data
                 pw.setMaxu(1, i=0)
                 self.currentOpenRawFile = Chromatogram()
-                # TODO include when implemented self.currentOpenRawFile.parse_file(b.file)
+                self.currentOpenRawFile.parse_file(b.file)
                 pw.setText("Raw data imported", i=0)
                 pw.setValueu(1, i=0)
 
             except:
-                pass
+                import traceback
+                traceback.print_exc()
 
             try:
                 ## Fetched matched MZ signal pairs
@@ -3721,17 +3709,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     numberOfMZs=row.co
                 pw.setMaxu(numberOfMZs, i=1)
 
-                maxMZsFetch=50000
-
-                if numberOfMZs<maxMZsFetch:
+                if numberOfMZs<5000:
 
                     pw.setText("Fetching mzs (%d)"%numberOfMZs, i=1)
 
                     for mzRes in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT id, mz, xcount, scanid, loading, scantime, intensity FROM MZs ORDER BY scanid"):
                         d = QtGui.QTreeWidgetItem(it, [str(s) for s in [mzRes.mz, mzRes.xcount, mzRes.scanid, "%.2f min / %.2f sec"%(mzRes.scantime/60., mzRes.scantime), mzRes.loading, "%.1f"%mzRes.intensity]])
-                        d.myType = "mz"
-                        d.myData=mzRes
-                        d.myID=int(mzRes.id)
+                        d.type = "mz"
+                        d.data=mzRes
                         children.append(d)
                         count += 1
 
@@ -3743,11 +3728,15 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 it.setText(1, "%d"%numberOfMZs)
 
             except:
-                pass
+                import traceback
+                traceback.print_exc()
+
+
+
 
             try:
                 it = QtGui.QTreeWidgetItem(["MZ bins"])
-                it.myType = "MZBins"
+                it.type = "MZBins"
                 self.ui.res_ExtractedData.addTopLevelItem(it)
                 mzbins = []
 
@@ -3756,15 +3745,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 count = 0
                 children=[]
 
-
                 ## Load mz bins
                 pw.setText("Fetching MZBins (%d)"%len(mzbins), i=2)
                 pw.setMax(len(mzbins), i=2)
-                if numberOfMZs<maxMZsFetch:
+                if numberOfMZs<50000:
                     for mzbin in mzbins:
                         d = QtGui.QTreeWidgetItem([str(mzbin.mz)])
-                        d.myType = "mzbin"
-                        d.myID = int(mzbin.id)
+                        d.type = "mzbin"
+                        d.data=Bunch
                         children.append(d)
                         countinner = 0
                         minInner = 1000000.
@@ -3786,9 +3774,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             xcount = mzRes.xcount
                             if numberOfMZs<maxMZsFetch:
                                 dd = QtGui.QTreeWidgetItem([str(s) for s in [mzRes.mz, mzRes.xcount, mzRes.scanid, "%.2f min / %.2f sec"%(mzRes.scantime/60., mzRes.scantime), mzRes.loading, "%.1f"%mzRes.intensity]])
-                                dd.myType = "mz"
-                                dd.myData=mzRes
-                                dd.myID=int(mzRes.id)
+                                dd.type = "mz"
+                                dd.data=mzRes
                                 d.addChild(dd)
                             countinner += 1
 
@@ -3806,14 +3793,16 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 it.setText(1, "%d" % len(mzbins))
 
             except:
-                pass
+                import traceback
+                traceback.print_exc()
 
 
             try:
                 ## Load feature pairs
-                it = QtGui.QTreeWidgetItem(["Feature pairs"])
+                it = QtGui.QTreeWidgetItem(["Feature pairs", "0"])
+                it.type = "Features"
+                it.data=Bunch
                 self.ui.res_ExtractedData.addTopLevelItem(it)
-                it.myType = "Features"
 
                 numberOfFeaturePairs=0
                 for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT count(chromPeaks.id) AS co FROM chromPeaks"):
@@ -3824,86 +3813,19 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                 count = 0
                 children=[]
-                for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT chromPeaks.id AS cpID, "
-                                                                               "mz, "
-                                                                               "lmz, "
-                                                                               "xcount, "
-                                                                               "NPeakCenterMin, "
-                                                                               "LPeakCenterMin, "
-                                                                               "NPeakCenter, "
-                                                                               "NPeakScale, "
-                                                                               "eicID, "
-                                                                               "LPeakScale, "
-                                                                               "peaksCorr, "
-                                                                               "peaksRatio, "
-                                                                               "LPeakCenter, "
-                                                                               "LPeakScale, "
-                                                                               "Loading, "
-                                                                               "heteroAtoms, "
-                                                                               "name AS tracerName, "
-                                                                               "adducts, "
-                                                                               "fDesc, "
-                                                                               "heteroAtoms, "
-                                                                               "chromPeaks.ionMode AS ionMode, "
-                                                                               "assignedName, "
-                                                                               "NBorderLeft, "
-                                                                               "NBorderRight, "
-                                                                               "LBorderLeft, "
-                                                                               "LBorderRight, "
-                                                                               "NPeakArea, "
-                                                                               "LPeakArea, "
-                                                                               "chromPeaks.massSpectrumID AS massSpectrumID, "
-                                                                               "assignedMZs, "
-                                                                               "artificialEICLShift "
-                                                                               "FROM chromPeaks LEFT JOIN tracerConfiguration ON tracerConfiguration.id=chromPeaks.tracer "
-                                                                               "ORDER BY tracerConfiguration.id, %s, NPeakCenter, mz, xcount"%({"M/Z":"mz", "RT":"NPeakCenter", "Intensity":"NPeakArea DESC", "Peaks correlation":"peaksCorr DESC"}[sortOrder])):
-                    adducts = ""
-                    lk = loads(base64.b64decode(row.adducts))
-                    if len(lk) > 0:
-                        adducts = ", ".join(lk)
-                    fDesc = ""
-                    lk=loads(base64.b64decode(row.fDesc))
-                    if len(lk) > 0:
-                        fDesc=", ".join(lk)
+                for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT id, mz, PeakCenter, PeakCenterMin, PeakScale, loading, ionMode, PeakArea FROM chromPeaks ORDER BY PeakCenter, mz"):
 
-                    heteroAtoms = []
-                    lk = loads(base64.b64decode(row.heteroAtoms))
-                    for hetAtom in lk:
-                        pIso = lk[hetAtom]
-                        for hetAtomCount in pIso:
-                            heteroAtoms.append("%s%d"%(hetAtom, hetAtomCount))
-                    heteroAtoms=", ".join(heteroAtoms)
+                    xp = Bunch(id=row.id, mz=float(row.mz), peakCenter=row.PeakCenter,
+                               rt=row.PeakCenterMin, peakScale=row.PeakScale, loading=row.loading,
+                               ionMode=row.ionMode, peakArea=row.PeakArea)
 
-                    assignedMZs=loads(base64.b64decode(row.assignedMZs))
+                    d = QtGui.QTreeWidgetItem(["%.5f" % xp.mz + "   /" + str(xp.ionMode) + str(xp.loading),
+                                               "%.2f" % (xp.rt),
+                                               "%.0f" % (xp.peakScale),
+                                               "%.3f" % (xp.peakArea)])
 
-                    try:
-                        row.xcount=int(row.xcount)
-                    except Exception:
-                        pass  ## double labeling experiment. That's fine
-
-                    xp = ChromPeakFeature(NPeakCenter=int(row.NPeakCenter), LPeakScale=float(row.LPeakScale), LPeakCenter=int(row.LPeakCenter),
-                                          NPeakScale=float(row.NPeakScale), NSNR=0, NPeakArea=-1, mz=float(row.mz), lmz=float(row.lmz), xCount=row.xcount,
-                                          NBorderLeft=float(row.NBorderLeft), NBorderRight=float(row.NBorderRight),
-                                          LBorderLeft=float(row.LBorderLeft), LBorderRight=float(row.LBorderRight),
-                                          NPeakCenterMin=float(row.NPeakCenterMin), LPeakCenterMin=float(row.LPeakCenterMin), eicID=int(row.eicID), massSpectrumID=int(row.massSpectrumID),
-                                          assignedName=str(row.assignedName), id=int(row.cpID), loading=int(row.Loading), peaksCorr=float(row.peaksCorr), peaksRatio=float(row.peaksRatio),
-                                          tracer=str(row.tracerName), ionMode=str(row.ionMode), heteroAtoms=heteroAtoms, adducts=adducts, fDesc=fDesc, assignedMZs=assignedMZs)
-
-                    d = QtGui.QTreeWidgetItem(["%.5f"%xp.mz + " (/" + str(row.ionMode) + str(row.Loading) + ") ",
-                                               "%.2f / %.2f" % (float(row.NPeakCenterMin) / 60., float(row.LPeakCenterMin) / 60.),
-                                               str(row.xcount),
-                                               "%s / %s / %s "%(adducts, fDesc, heteroAtoms),
-                                               "%.0f / %.0f" % (float(row.NPeakScale), float(row.LPeakScale)),
-                                               "%.3f%s"%(row.peaksCorr, "" if xp.artificialEICLShift==0 else " (%d)"%(xp.artificialEICLShift)),
-                                               "%.3f / %.3f"%(row.peaksRatio, row.NPeakArea/row.LPeakArea),
-                                               "%.1f / %.1f"%(row.NPeakArea, row.LPeakArea),
-                                               "%d"%len(assignedMZs),
-                                               "%.5f"%(xp.lmz),
-                                               str(row.tracerName)])
-
-                    d.myType = "feature"
-                    d.myID = int(row.cpID)
-                    d.myData = xp
+                    d.type = "feature"
+                    d.data = xp
                     children.append(d)
                     count += 1
 
@@ -3911,455 +3833,21 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 pw.setTextu("%d feature pairs fetched"%numberOfFeaturePairs, i=3)
 
                 it.addChildren(children)
-                it.setExpanded(False)
-                it.setText(1, "%d" % count)
-
-            except:
-                pass
-
-
-            try:
-                it = QtGui.QTreeWidgetItem(["Feature groups"])
-                self.ui.res_ExtractedData.addTopLevelItem(it)
-                it.myType = "Feature Groups"
                 it.setExpanded(True)
-                count = 0
-                fGs = []
-
-                children=[]
-                for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT featureGroups.id AS fgID, "
-                                                                               "featureName AS featureName, "
-                                                                               "name AS tracerName "
-                                                                               "FROM featureGroups INNER JOIN tracerConfiguration ON featureGroups.tracer=tracerConfiguration.id "
-                                                                               "ORDER BY tracerConfiguration.id, featureGroups.id"):
-                    fGs.append(row)
-
-
-                ## Load Feature groups
-                pw.setText("Fetching feature groups (%d)"%len(fGs), i=4)
-                pw.setMax(len(fGs), i=4)
-                for fG in fGs:
-
-                    d = QtGui.QTreeWidgetItem([str(fG.featureName), "", str(fG.fgID), "", "", "", "", "", "", str(fG.tracerName), ""])
-                    d.myType = "featureGroup"
-                    d.myID = fG.fgID
-                    d.myData = fG
-                    d.setExpanded(True)
-                    cpCount = 0
-                    sumRt = 0.
-                    for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT c.id AS cpID, "
-                                                                                   "c.mz AS mz, "
-                                                                                   "c.lmz AS lmz, "
-                                                                                   "c.xcount AS xcount, "
-                                                                                   "c.NPeakCenterMin AS NPeakCenterMin, "
-                                                                                   "c.LPeakCenterMin AS LPeakCenterMin, "
-                                                                                   "c.NPeakCenter AS NPeakCenter, "
-                                                                                   "c.NPeakScale AS NPeakScale, "
-                                                                                   "c.NBorderLeft AS NBorderLeft, "
-                                                                                   "c.NBorderRight AS NBorderRight, "
-                                                                                   "c.LBorderLeft AS LBorderLeft, "
-                                                                                   "c.LBorderRight AS LBorderRight, "
-                                                                                   "c.eicID AS eicID, "
-                                                                                   "f.fDesc AS fDesc, "
-                                                                                   "c.LPeakScale AS LPeakScale, "
-                                                                                   "c.LPeakCenter AS LPeakCenter, "
-                                                                                   "c.peaksCorr AS peaksCorr, "
-                                                                                   "c.peaksRatio AS peaksRatio, "
-                                                                                   "c.Loading AS Loading, "
-                                                                                   "c.NPeakArea AS NPeakArea, "
-                                                                                   "c.LPeakArea AS LPeakArea, "
-                                                                                   "t.name AS tracerName, "
-                                                                                   "adducts AS adducts, "
-                                                                                   "c.fDesc AS fDesc, "
-                                                                                   "heteroAtoms AS heteroAtoms, "
-                                                                                   "c.assignedName AS assignedName, "
-                                                                                   "c.ionMode AS ionMode, "
-                                                                                   "c.massSpectrumID AS massSpectrumID, "
-                                                                                   "c.assignedMZs AS assignedMZs, "
-                                                                                   "c.mzdifferrors AS mzdifferrors, "
-                                                                                   "c.artificialEICLShift AS artificialEICLShift "
-                                                                                   "FROM chromPeaks c JOIN featureGroupFeatures f ON c.id==f.fID INNER JOIN tracerConfiguration t ON t.id=c.tracer "
-                                                                                   "WHERE f.fGroupID=%d ORDER BY %s, c.mz, c.xcount" % (fG.fgID, {"M/Z":"c.mz", "RT":"c.mz", "Intensity":"c.NPeakArea DESC", "Peaks correlation":"peaksCorr DESC"}[sortOrder])):
-
-                        adducts = ""
-                        lk = loads(base64.b64decode(row.adducts))
-                        if len(lk) > 0:
-                            adducts = ", ".join(lk)
-
-                        fDesc = ""
-                        lk = loads(base64.b64decode(row.fDesc))
-                        if len(lk) > 0:
-                            fDesc = ", ".join(lk)
-
-                        heteroAtoms = []
-                        lk = loads(base64.b64decode(row.heteroAtoms))
-                        for hetAtom in lk:
-                            pIso = lk[hetAtom]
-                            for hetAtomCount in pIso:
-                                heteroAtoms.append("%s%d"%(hetAtom, hetAtomCount))
-                        heteroAtoms=", ".join(heteroAtoms)
-
-                        assignedMZs=loads(base64.b64decode(row.assignedMZs))
-
-                        xp = ChromPeakFeature(NPeakCenter=int(row.NPeakCenter), loading=int(row.Loading), LPeakScale=float(row.LPeakScale),
-                                              LPeakCenter=int(row.LPeakCenter), NPeakScale=float(row.NPeakScale), NSNR=0, NPeakArea=-1,
-                                              mz=float(row.mz), lmz=float(row.lmz), xCount=row.xcount, NPeakCenterMin=float(row.NPeakCenterMin),
-                                              NBorderLeft=float(row.NBorderLeft), NBorderRight=float(row.NBorderRight),
-                                              LBorderLeft=float(row.LBorderLeft), LBorderRight=float(row.LBorderRight),
-                                              LPeakCenterMin=float(row.LPeakCenterMin), eicID=int(row.eicID), massSpectrumID=int(row.massSpectrumID),
-                                              assignedName=str(row.assignedName), id=int(row.cpID),
-                                              tracer=str(row.tracerName), ionMode=str(row.ionMode), adducts=adducts, heteroAtoms=heteroAtoms, assignedMZs=assignedMZs,
-                                              artificialEICLShift=int(row.artificialEICLShift))
-                        xp.fDesc = str(row.fDesc)
-                        xp.peaksCorr = float(row.peaksCorr)
-                        xp.peaksRatio = float(row.peaksRatio)
-
-                        g = QtGui.QTreeWidgetItem(["%.5f"%xp.mz + " (/" + str(row.ionMode) + str(row.Loading) + ") ",
-                                                   "%.2f / %.2f" % (float(row.NPeakCenterMin) / 60., float(row.LPeakCenterMin) / 60.),
-                                                   str(row.xcount),
-                                                   "%s / %s / %s "%(adducts, fDesc, heteroAtoms),
-                                                   "%.0f / %.0f" % (float(row.NPeakScale), float(row.LPeakScale)),
-                                                   "%.3f%s"%(row.peaksCorr, "" if xp.artificialEICLShift==0 else " (%d)"%(xp.artificialEICLShift)),
-                                                   "%.3f / %.3f"%(row.peaksRatio, row.NPeakArea/row.LPeakArea),
-                                                   "%.1f / %.1f"%(row.NPeakArea, row.LPeakArea),
-                                                   "%d"%len(assignedMZs),
-                                                   "%.5f"%(xp.lmz),
-                                                   str(row.tracerName)])
-
-                        g.myType = "feature"
-                        g.myID = int(row.cpID)
-                        g.myData = xp
-                        d.addChild(g)
-
-                        sumRt = sumRt + xp.NPeakCenterMin
-                        cpCount += 1
-                    d.setText(2, str(cpCount))
-                    if cpCount>0:
-                        d.setText(1, "%.2f" % (sumRt / cpCount / 60.))
-                    else:
-                        d.setText(1, "")
-                    children.append(d)
-                    count += 1
-                    pw.setValueu(count, i=4)
-                it.addChildren(children)
                 it.setText(1, "%d" % count)
 
-                pw.hide()
-
             except:
-                pass
-
-
-            try:
-                ## Load parameters
-                it = QtGui.QTreeWidgetItem(["Parameters"]);
-                it.myType = "parameter"
-                self.ui.res_ExtractedData.addTopLevelItem(it)
-                config = {}
-                for row in self.currentOpenResultsFile.curs.execute("SELECT key, value FROM config"):
-                    config[str(row[0])] = str(row[1])
-
-                if config["metabolisationExperiment"] == "True":
-                    itl = QtGui.QTreeWidgetItem(["Tracers"]);
-                    it.addChild(itl);
-                    itl.myType = "parameter";
-                    itl.myType = "parameter"
-                    for tracer in loads(base64.b64decode(config["configuredTracers"])):
-                        itle = QtGui.QTreeWidgetItem([tracer.name]);
-                        itl.addChild(itle);
-                        itle.myType = "parameter"
-                        itlee = QtGui.QTreeWidgetItem(["Elements", "%d" % tracer.elementCount]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                        itlee = QtGui.QTreeWidgetItem(["Labelling", "%s/%s" % (tracer.isotopeA, tracer.isotopeB)]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                        itlee = QtGui.QTreeWidgetItem(["Delta mz", "%.5f" % (
-                            getIsotopeMass(tracer.isotopeB)[0] - getIsotopeMass(tracer.isotopeA)[0])]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                        itlee = QtGui.QTreeWidgetItem(
-                            ["%s purity" % tracer.isotopeA, "%.2f%%" % (float(tracer.enrichmentA) * 100.)]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                        itlee = QtGui.QTreeWidgetItem(
-                            ["%s purity" % tracer.isotopeB, "%.2f%%" % (float(tracer.enrichmentB) * 100.)]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                        itlee = QtGui.QTreeWidgetItem(["%s amount" % tracer.isotopeA, "%.2f" % tracer.amountA]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                        itlee = QtGui.QTreeWidgetItem(["%s amount" % tracer.isotopeB, "%.2f" % tracer.amountB]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                        itlee = QtGui.QTreeWidgetItem(
-                            ["%s/%s ratio" % (tracer.isotopeA, tracer.isotopeB), "%.4f" % tracer.monoisotopicRatio]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                        itlee = QtGui.QTreeWidgetItem(["Upper error", "%.2f%%" % (float(tracer.maxRelNegBias) * 100.)]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                        itlee = QtGui.QTreeWidgetItem(["Lower error", "%.2f%%" % (float(tracer.maxRelPosBias) * 100.)]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                else:
-                    itl = QtGui.QTreeWidgetItem(["Full metabolome labelling experiment"]);
-                    it.addChild(itl);
-                    itl.myType = "parameter"
-                    itle = QtGui.QTreeWidgetItem(["%d%s/%d%s" % (
-                        float(config["isotopeA"]), config["labellingElement"], float(config["isotopeB"]),
-                        config["labellingElement"])]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                    itle = QtGui.QTreeWidgetItem(["%d%s purity" % (float(config["isotopeA"]), config["labellingElement"]),
-                                                  "%.2f%%" % (float(config["purityN"]) * 100.)]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                    itle = QtGui.QTreeWidgetItem(["%d%s purity" % (float(config["isotopeB"]), config["labellingElement"]),
-                                                  "%.2f%%" % (float(config["purityL"]) * 100.)]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-
-                    if "useRatio" in config.keys() and config["useRatio"]:
-                        if "minRatio" in config.keys():
-                            itle = QtGui.QTreeWidgetItem(["Min. ratio" , config["minRatio"]]);
-                            itl.addChild(itle);
-                            itle.myType = "parameter"
-                        if "maxRatio" in config.keys():
-                            itle = QtGui.QTreeWidgetItem(["Max. ratio" , config["maxRatio"]]);
-                            itl.addChild(itle);
-                            itle.myType = "parameter"
-
-                itl = QtGui.QTreeWidgetItem(["MZ picking"]);
-                it.addChild(itl);
-                itl.myType = "parameter"
-                if "positiveScanEvent" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["ScanEvent (positive)", config["positiveScanEvent"]]);
-                    itl.addChild(itle)
-                    itle.myType = "parameter"
-                if "negativeScanEvent" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["ScanEvent (negative)", config["negativeScanEvent"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "xMin" in config.keys() and "xMax" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Atoms range", "%d - %d" % (int(config["xMin"]), int(config["xMax"]))]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "startTime" in config.keys() and "stopTime" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(
-                        ["Scan range", "%.2f - %.2f min" % (float(config["startTime"]), float(config["stopTime"]))]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "intensityThreshold" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Intensity threshold", "%.0f" % float(config["intensityThreshold"])]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "intensityCutoff" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Intensity cutoff", "%.0f" % float(config["intensityCutoff"])]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "maxLoading" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Max. charge", "%d" % int(config["maxLoading"])]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "ppm" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Mass deviation (+/- ppm)", "%.1f" % (float(config["ppm"]))]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "isotopicPatternCountLeft" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Isotopic pattern count (A)", config["isotopicPatternCountLeft"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "isotopicPatternCountRight" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Isotopic pattern count (B)", config["isotopicPatternCountRight"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "lowAbundanceIsotopeCutoff" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Consider isotopologue abundance", config["lowAbundanceIsotopeCutoff"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "Intensity abundance error" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Intensity abundance error"]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "intensityErrorN" in config.keys():
-                    itlee = QtGui.QTreeWidgetItem(["Non-labelled ion", config["intensityErrorN"]]);
-                    itle.addChild(itlee);
-                    itlee.myType = "parameter"
-                if "intensityErrorL" in config.keys():
-                    itlee = QtGui.QTreeWidgetItem(["Labelled ion", config["intensityErrorL"]]);
-                    itle.addChild(itlee);
-                    itlee.myType = "parameter"
-
-                itl = QtGui.QTreeWidgetItem(["MZ clustering"]);
-                it.addChild(itl);
-                itl.myType = "parameter"
-                if "clustPPM" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Clustering ppm", config["clustPPM"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "minSpectraCount" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Min. spectra", config["minSpectraCount"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-
-                itl = QtGui.QTreeWidgetItem(["Chromatographic peak picking"]);
-                it.addChild(itl);
-                itl.myType = "parameter"
-                if "chromPeakPPM" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["EIC ppm", config["chromPeakPPM"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "eicSmoothing" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["EIC smoothing", config["eicSmoothing"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "eicSmoothing" in config.keys() and bool(config["eicSmoothing"]) and "eicSmoothingWindowSize" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Smoothing window size", config["eicSmoothingWindowSize"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "scales" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Min. scale", "%.0f" % (loads(base64.b64decode(config["scales"]))[0])]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                    itle = QtGui.QTreeWidgetItem(["Max. scale", "%.0f" % (loads(base64.b64decode(config["scales"]))[1])]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "snrTh" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["SNR threshold", config["snrTh"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-
-                itl = QtGui.QTreeWidgetItem(["Peak matching"]);
-                it.addChild(itl);
-                itl.myType = "parameter"
-                if "peakCenterError" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Center error", config["peakCenterError"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "minPeakCorr" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Min. corr", config["minPeakCorr"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-
-                itl = QtGui.QTreeWidgetItem(["Group features"]);
-                it.addChild(itl);
-                itl.myType = "parameter"
-                if "minCorrelation" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Min. corr", config["minCorrelation"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                if "minCorrelationConnections" in config.keys():
-                    itle = QtGui.QTreeWidgetItem(["Min. correlation connections", config["minCorrelationConnections"]]);
-                    itl.addChild(itle);
-                    itle.myType = "parameter"
-                itle = QtGui.QTreeWidgetItem(["Adducts"]);
-                itl.addChild(itle);
-                itle.myType = "parameter"
-                if "adducts" in config.keys():
-                    for adduct in loads(base64.b64decode(config["adducts"])):
-                        itlee = QtGui.QTreeWidgetItem([str(adduct.name), str(adduct.mzoffset), str(adduct.polarity)]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-                itle = QtGui.QTreeWidgetItem(["Neutral loss (elements)"]);
-                itl.addChild(itle);
-                itle.myType = "parameter"
-                if "elements" in config.keys():
-                    for elem, elemDetails in loads(base64.b64decode(config["elements"])).items():
-                        itlee = QtGui.QTreeWidgetItem(
-                            [str(elem), "%.4f" % elemDetails.weight, str(elemDetails.numberValenzElectrons),
-                            "%d-%d" % (elemDetails.minCount, elemDetails.maxCount)]);
-                        itle.addChild(itlee);
-                        itlee.myType = "parameter"
-
-            except:
-                pass
-
-            self.sortTreeChildren(self.ui.res_ExtractedData.topLevelItem(3), 1)
-
-            self.filterEdited(str(self.ui.dataFilter.text()))
-
-            sectionSizes=[235,65,50,105,110,70,85,70,50,60,75]
-            for i in range(11):
-                self.ui.res_ExtractedData.header().resizeSection(i, sectionSizes[i])
-
-
-
-
-            ## Setup diagnostics
-            it = QtGui.QTreeWidgetItem(["Diagnostics"])
-            it.myType = "diagnostic"
-            self.ui.res_ExtractedData.addTopLevelItem(it)
-
-            itl = QtGui.QTreeWidgetItem(["Observed intensities"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - observed intensities"
-
-            itl = QtGui.QTreeWidgetItem(["Native vs. labeled signal intensity"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - observed intensities comparison"
-
-            itl = QtGui.QTreeWidgetItem(["Relative mz error"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - relative mz error"
-
-            itl = QtGui.QTreeWidgetItem(["Relative mz error vs. signal intensity"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - relative mz error vs intensity"
-
-            itl = QtGui.QTreeWidgetItem(["Relative mzbin deviation"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - relative mzbin deviation"
-
-            itl = QtGui.QTreeWidgetItem(["Feature pair correlations"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - feature pair correlations"
-
-            itl = QtGui.QTreeWidgetItem(["Feature pair M+1/M ratio absolute"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - feature pair mp1 to m ratio abs"
-
-            itl = QtGui.QTreeWidgetItem(["Feature pair M+1/M RIA"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - feature pair mp1 to m ratio rel"
-
-            itl = QtGui.QTreeWidgetItem(["Feature pair M+1/M RIA vs intensity"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - feature pair mp1 to m IRA vs intensity"
-
-            itl = QtGui.QTreeWidgetItem(["Feature pair M'-1/M' ratio absolute"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - feature pair mPp1 to mP ratio abs"
-
-            itl = QtGui.QTreeWidgetItem(["Feature pair M'-1/M' RIA"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - feature pair mPp1 to mP ratio rel"
-
-            itl = QtGui.QTreeWidgetItem(["Feature pair M'-1/M' RIA vs intensity"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - feature pair mPp1 to mP IRA vs intensity"
-
-            itl = QtGui.QTreeWidgetItem(["Feature pair assigned MZs"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - feature pair assigned mzs"
-
-            itl = QtGui.QTreeWidgetItem(["Mean feature pair MZ deviation"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - feature pair mz deviation mean"
-
-            itl = QtGui.QTreeWidgetItem(["Feature pair MZ deviation"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - feature pair mz deviation"
-
-            itl = QtGui.QTreeWidgetItem(["Peak MZ deviation"])
-            it.addChild(itl)
-            itl.myType = "diagnostic - EIC mz deviation"
-
-
-
+                import traceback
+                traceback.print_exc()
 
         else:
             QtGui.QMessageBox.warning(self, "MetExtract", "No results are available for file %s", QtGui.QMessageBox.Ok)
+
+
+
+
+
+
 
     def deColorQTreeWidgetItem(self, item):
         item.setBackgroundColor(0, QColor("white"))
@@ -7000,6 +6488,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.ui.useCValidation.setVisible(False)
 
             self.ui.useRatio.setVisible(False)
+
+            self.ui.numberOfAtomsBox.setVisible(False)
         else:
             raise Exception("undefined module provided")
 
@@ -7130,9 +6620,17 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
 
 
-    def annotateMetabolitesChanged(self, events):
-        self.ui.generateSumFormulas_CheckBox.setEnabled(self.ui.annotateMetabolites_CheckBox.isChecked())
-        self.ui.searchDB_checkBox.setEnabled(self.ui.annotateMetabolites_CheckBox.isChecked())
+    def procIndFilesChanges(self, sta):
+        self.ui.frame_procIndFiles.setVisible(sta)
+    def processMultipleFilesChanged(self, sta):
+        self.ui.frame_bracketResults.setVisible(sta)
+    def annotateMetabolitesChanged(self, sta):
+        self.ui.frame_annotateMetabolites.setVisible(sta)
+    def genrateMSMSListsChanged(self, sta):
+        self.ui.frame_generateMSMSTargetLists.setVisible(sta)
+
+
+
 
     def addDB(self, events):
         dbFile = QtGui.QFileDialog.getOpenFileName(caption="Select database file", directory=self.lastOpenDir,
@@ -7333,8 +6831,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.updateTracerInfo()
         self.ui.setupTracers.clicked.connect(self.showTracerEditor)
 
-        self.ui.processIndividualFiles.toggled.connect(self.procIndFilesChanges)
-        self.ui.groupResults.toggled.connect(self.groupFilesChanges)
         self.ui.processMultipleFiles.toggled.connect(self.processMultipleFilesChanged)
         self.ui.saveMZXML.toggled.connect(self.saveMZXMLChanged)
         self.updateIndividualFileProcessing = True
@@ -7408,7 +6904,19 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
 
 
-        self.ui.annotateMetabolites_CheckBox.stateChanged.connect(self.annotateMetabolitesChanged)
+        self.ui.processIndividualFiles.toggled.connect(self.procIndFilesChanges)
+        self.ui.groupResults.toggled.connect(self.groupFilesChanges)
+        self.ui.annotateMetabolites_CheckBox.toggled.connect(self.annotateMetabolitesChanged)
+        self.ui.generateMSMSInfo_CheckBox.toggled.connect(self.genrateMSMSListsChanged)
+        self.ui.processIndividualFiles.setChecked(False)
+        self.ui.groupResults.setChecked(False)
+        self.ui.annotateMetabolites_CheckBox.setChecked(False)
+        self.ui.generateMSMSInfo_CheckBox.setChecked(False)
+        self.ui.frame_procIndFiles.setVisible(False)
+        self.ui.frame_bracketResults.setVisible(False)
+        self.ui.frame_annotateMetabolites.setVisible(False)
+        self.ui.frame_generateMSMSTargetLists.setVisible(False)
+
 
         self.dbListModel=QtGui.QStandardItemModel()
         self.ui.dbList_listView.setModel(self.dbListModel)

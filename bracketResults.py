@@ -218,7 +218,7 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
 
             xCounts=set()
             for res in results:
-                for row in res.curs.execute("SELECT DISTINCT xcount FROM chromPeaks"):
+                for row in res.curs.execute("SELECT DISTINCT similarityString FROM chromPeaks"):
                     xCounts.add(str(row[0]))
             xCounts=sorted(list(xCounts))
 

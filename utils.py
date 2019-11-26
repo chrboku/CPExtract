@@ -396,7 +396,9 @@ class Bunch:
                 for att, val in _addFollowing.items():
                     setattr(self, att, val)
             else:
-                raise Exception("Unknown Parameter Type: Only list and dict are supported!")
+                import traceback
+                traceback.print_exc()
+                raise Exception("Unknown Parameter Type: Only list and dict are supported! (object is %s)"%(type(_addFollowing)))
         self.__dict__.update(kwds)
 
     def __str__(self):

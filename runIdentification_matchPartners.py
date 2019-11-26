@@ -19,9 +19,8 @@
 from utils import getNormRatio
 from utils import Bunch
 from copy import deepcopy
-from formulaTools import formulaTools
+from matchIsotopologPatternRules import RuleMatcher
 
-from matchIsotopologPatternRules import *
 
 def getSubstitutionArray(purity, xMax, maxSub):
     ret = []
@@ -85,7 +84,7 @@ def getCombinationsOfLabel(useElems, labelingElements, minLabelingAtoms, maxLabe
 # labelled and have the same chance to be labelled. Thus, fluxomics applications or such isotope patterns
 # are in general not supported. They can, however, be detected if not isotopolog verification step is
 # used (not recommended)
-def matchPartners(mzXMLData, forFile,
+def matchPartners(mzXMLData, rules,
                   labellingIsotopeB, useCIsotopePatternValidation, intensityThres, isotopologIntensityThres, maxLoading, xCounts, xOffset, ppm,
                   intensityErrorN, intensityErrorL, purityN, purityL, startTime, stopTime, filterLine, ionMode,
                   peakCountLeft, peakCountRight, lowAbundanceIsotopeCutoff, metabolisationExperiment, checkRatio,
@@ -105,22 +104,7 @@ def matchPartners(mzXMLData, forFile,
     purityNArray = getSubstitutionArray(purityN, max(xCounts)+1, maxSub)   # native metabolite
     purityLArray = getSubstitutionArray(purityL, max(xCounts)+1, maxSub)   # labelled metabolite
 
-    fT = formulaTools()
 
-
-    rules=[
-        PresenceRule(otherIsotopolog="[13C]-2",  minIntensity=intensityThres, mustBePresent=True, verifyChromPeakSimilarity=True,   ratioWindows={"X": [0.1, 3]}),
-        PresenceRule(otherIsotopolog="[13C]-4",  minIntensity=intensityThres, mustBePresent=True, verifyChromPeakSimilarity=True,   ratioWindows={"X": [0.1, 3]}),
-        PresenceRule(otherIsotopolog="[13C]-6",  minIntensity=intensityThres, mustBePresent=True, verifyChromPeakSimilarity=True,   ratioWindows={"X": [0.1, 3]}),
-        PresenceRule(otherIsotopolog="[13C]-8",  minIntensity=intensityThres, mustBePresent=True, verifyChromPeakSimilarity=True,   ratioWindows={"X": [0.1, 3]}),
-        PresenceRule(otherIsotopolog="[13C]-10", minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.0, 10]}),
-        PresenceRule(otherIsotopolog="[13C]-12", minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.0, 10]}),
-        PresenceRule(otherIsotopolog="[13C]-1",  minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-2": [0.01, 0.8]}),
-        PresenceRule(otherIsotopolog="[13C]-3",  minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-4": [0.01, 0.8]}),
-        PresenceRule(otherIsotopolog="[13C]-5",  minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-6": [0.01, 0.8]}),
-        PresenceRule(otherIsotopolog="[13C]-7",  minIntensity=intensityThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-8": [0.01, 0.8]}),
-        AbsenceRule (otherIsotopolog="[13C]1",   maxRatio=0.01)
-    ]
     ruleMatcher=RuleMatcher(rules, ppm=ppm, log=False)
 
     # iterate over all MS scans (lvl. 1)

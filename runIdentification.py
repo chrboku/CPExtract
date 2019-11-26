@@ -25,6 +25,7 @@ from copy import copy
 from math import floor
 from pickle import loads, dumps
 from sqlite3 import *
+from collections import OrderedDict
 
 import numpy as np
 
@@ -81,6 +82,8 @@ from utils import corr, getSubGraphs, ChromPeakFeature, Bunch, natSort
 from SGR import SGRGenerator
 from mePyGuis.TracerEdit import ConfiguredTracer
 import exportAsFeatureML
+
+from matchIsotopologPatternRules import *
 
 
 def getDBSuffix():
@@ -701,7 +704,7 @@ class RunIdentification:
     # data processing step 1: searches each mass spectrum for isotope patterns of native and highly isotope enriched
     # metabolite ions. The actual calculation and processing of the data is performed in the file runIdentification_matchPartners.py.
     # The positive and negative ionisation modes are processed separately.
-    def findSignalPairs(self, mzxml, tracer, reportFunction=None):
+    def findSignalPairs(self, mzxml, tracer, rules, reportFunction=None):
         mzs = []
         posFound = 0
         negFound = 0
@@ -728,7 +731,7 @@ class RunIdentification:
                 def reportFunctionHelper(curVal, text):
                     reportFunction(curVal / 2, text)
 
-            p = matchPartners(mzXMLData=mzxml, forFile=self.file,
+            p = matchPartners(mzXMLData=mzxml, rules=rules,
                               labellingIsotopeB=self.labellingIsotopeB,
                               useCIsotopePatternValidation=self.useCIsotopePatternValidation,
                               intensityThres=self.intensityThreshold,
@@ -759,7 +762,7 @@ class RunIdentification:
                 def reportFunctionHelper(curVal, text):
                     reportFunction(.5 + curVal / 2, text)
 
-            n = matchPartners(mzXMLData=mzxml, forFile=self.file,
+            n = matchPartners(mzXMLData=mzxml, rules=rules,
                               labellingIsotopeB=self.labellingIsotopeB,
                               useCIsotopePatternValidation=self.useCIsotopePatternValidation,
                               intensityThres=self.intensityThreshold,
@@ -1090,7 +1093,8 @@ class RunIdentification:
                                 self.printMessage("\n\n%d: Peak similarities found: mz %.5f, RT %.2f min, PeakArea %s, ScanEvent %s"%(len(chromPeaks), mz, times[peak.peakIndex]/60., peak.peakArea, scanEvent), type="warning")
                                 for iso in natSort(peak.foundMatches.keys()):
                                     peakB=peak.foundMatches[iso]
-                                    self.printMessage("    --> %s, RT %.2f min, Area %.1f (AreaRatio %.3f%%, IntensityRatio %.3f%%), Pearson correlation %.3f, Artificial shift %d" % (iso, times[peakB.peakIndex] / 60., peakB.peakArea,100*peakB.peakArea/peak.peakArea, 100*peakB.peaksRatio, peakB.peaksCorr, peakB.artificialShift), type="warning")
+                                    self.printMessage("    --> %s, RT %5.2f min, Area %12.1f (AreaRatio %8.3f%%, IntensityRatio %8.3f%%), Pearson correlation %6.3f, Artificial shift %4d" %
+                                                      (iso, times[peakB.peakIndex] / 60., peakB.peakArea,100*peakB.peakArea/peak.peakArea, 100*peakB.peaksRatio, peakB.peaksCorr, peakB.artificialShift), type="warning")
 
         conn.commit()
         curs.close()
@@ -1100,7 +1104,7 @@ class RunIdentification:
 
     # data processing step 6: convolute different feature pairs into feature groups using the chromatographic
     # profiles of different metabolite ions
-    def groupFeaturePairsUntargetedAndWriteToDB(self, chromPeaks, mzxml, tracer, tracerID, reportFunction=None):
+    def groupFeaturePairsUntargetedAndWriteToDB(self, chromPeaks, mzxml, reportFunction=None):
         try:
             conn = connect(self.file + getDBSuffix())
             curs = conn.cursor()
@@ -1401,13 +1405,19 @@ class RunIdentification:
         curs = conn.cursor()
 
         features=[]
-
-        for chromPeak in SQLSelectAsObject(curs,
-                                           "SELECT c.id AS id, c.mz AS mz, c.lmz AS lmz, c.xcount AS xCount, c.Loading AS loading, c.NPeakCenterMin AS NPeakCenterMin FROM chromPeaks c",
-                                           newObject=ChromPeakFeature):
-            b = Bunch(id=chromPeak.id, ogroup="-1", mz=chromPeak.mz, rt=chromPeak.NPeakCenterMin, Xn=chromPeak.xCount,
-                      lmz=chromPeak.lmz, charge=chromPeak.loading, name=chromPeak.id)
-            features.append(b)
+        cols = OrderedDict([("id", "id"),
+                            ("ogroup", "fGroupID"),
+                            ("mz", "mz"),
+                            ("rt", "PeakCenterMin"),
+                            ("lmz", "mz"),
+                            ("charge", "loading"),
+                            ("name", "id")
+                            ])
+        for chromPeak in SQLSelectAsObject(curs, "SELECT %s FROM chromPeaks" % (", ".join(["%s AS %s" % (cols[col], col) for col in cols.keys()])), newObject=Bunch):
+            chromPeak.ogroup=-1
+            chromPeak.Xn=0
+            chromPeak.rt=chromPeak.rt*60.
+            features.append(chromPeak)
 
         exportAsFeatureML.writeFeatureListToFeatureML(features, forFile+".featureML", ppmPM=self.ppm, rtPM=0.25*60)
 
@@ -1420,188 +1430,73 @@ class RunIdentification:
         chromPeaks = []
         configTracers = {}
 
-        for chromPeak in SQLSelectAsObject(curs, "SELECT c.id AS id, g.fGroupID AS fGroupID, c.mz AS mz, c.lmz AS lmz, c.tmz AS tmz, c.xcount AS xCount, c.Loading AS loading, "
-                                                 "c.ionMode AS ionMode, c.NPeakCenter AS NPeakCenter, c.NPeakCenterMin AS NPeakCenterMin, "
-                                                 "c.NPeakScale AS NPeakScale, c.NPeakArea AS NPeakArea, c.NPeakAbundance AS NPeakAbundance, c.LPeakCenter AS LPeakCenter, "
-                                                 "c.LPeakCenterMin AS LPeakCenterMin, c.LPeakScale AS LPeakScale, c.LPeakArea AS LPeakArea, c.LPeakAbundance AS LPeakAbundance, "
-                                                 "c.NBorderLeft as NBorderLeft, c.NBorderRight as NBorderRight, c.LBorderLeft as LBorderLeft, c.LBorderRight as LBorderRight, "
-                                                 "c.peaksCorr AS peaksCorr, c.assignedMZs AS assignedMZs, c.heteroAtoms AS HAs, c.adducts AS ADs, "
-                                                 "c.fDesc AS DSc, t.id AS tracer, t.name AS tracerName, "
-                                                 "c.peaksRatio AS peaksRatio, c.peaksRatioMp1 AS peaksRatioMp1, c.peaksRatioMPm1 as peaksRatioMPm1, "
-                                                 "c.isotopesRatios AS isotopeRatios , c.mzDiffErrors AS mzDiffErrors , c.comments AS comments, c.artificialEICLShift AS artificialEICLShift FROM "
-                                                 "chromPeaks c INNER JOIN featureGroupFeatures g ON c.id=g.fID INNER JOIN tracerConfiguration t ON c.tracer=t.id", newObject=ChromPeakFeature):
-            chromPeak.NPeakCenterMin=chromPeak.NPeakCenterMin/60.
-            chromPeak.LPeakCenterMin=chromPeak.LPeakCenterMin/60.
-            setattr(chromPeak, "heteroIsotopologues", loads(base64.b64decode(chromPeak.HAs)))
-            setattr(chromPeak, "adducts", loads(base64.b64decode(chromPeak.ADs)))
-            setattr(chromPeak, "fDesc", loads(base64.b64decode(chromPeak.DSc)))
-            setattr(chromPeak, "isotopeRatios", loads(base64.b64decode(chromPeak.isotopeRatios)))
-            setattr(chromPeak, "mzDiffErrors", loads(base64.b64decode(chromPeak.mzDiffErrors)))
-            setattr(chromPeak, "comments", "; ".join(loads(base64.b64decode(chromPeak.comments))))
-            chromPeaks.append(chromPeak)
+        cols=OrderedDict([("Num",     "id"),
+                          ("OGroup",  "fGroupID"),
+                          ("MZ",      "mz"),
+                          ("RT",      "PeakCenterMin"),
+                          ("Label",   "similarityString"),
+                          ("Z",       "loading"),
+                          ("Pol",     "ionMode"),
+                          ("Scale",   "PeakScale"),
+                          ("Area",    "PeakArea")
+        ])
 
-        if self.metabolisationExperiment:
+        with open(forFile + ".tsv", "w") as tsvFile:
+            tsvFile.write("\t".join(cols.keys()))
+            tsvFile.write("\n")
 
-            for tracer in SQLSelectAsObject(curs, "SELECT t.id AS id, t.name AS name, t.elementCount AS elementCount, t.natural AS isotopeA, t.labelling AS isotopeB, "
-                                                  "t.deltaMZ AS mzDelta, t.purityN AS enrichmentA, t.purityL AS enrichmentB, t.amountN AS amountA, t.amountL AS amountB, "
-                                                  "t.monoisotopicRatio AS monoisotopicRatio, t.lowerError AS maxRelNegBias, t.higherError AS maxRelPosBias, "
-                                                  "t.tracerType AS tracerType FROM tracerConfiguration t", newObject=ConfiguredTracer):
-                configTracers[tracer.id]=tracer
 
-        curs.close()
-        conn.close()
-
-        csvFile = open(forFile + ".tsv", "w")
-        csvFile.write(
-            "\t".join(["Num","MZ","L_MZ","D_MZ_Error_ppm","FoundInScans","D_MZ_Peak_Error_mean_ppm","D_MZ_Peak_Error_sd_ppm","D_MZ_Min_ppm","D_MZ_Max_ppm","Quant20_MZ_Diff_ppm","Quant80_MZ_Diff_ppm","RT","Xn","Charge","ScanEvent","Ionisation_Mode","Tracer","Area_N","Area_L","Abundance_N","Abundance_L","Fold","PeakRatio","LeftBorder_N","RightBorder_N","LeftBorder_L","RightBorder_L","Group_ID","Corr", "ArtificialEICLShift","Adducts", "FDesc","Hetero_Elements","Comments"])
-            )
-        if len(chromPeaks)>1:
-            i=1
-            for isoRatio in chromPeaks[0].isotopeRatios:
-                csvFile.write("\tObservedIsoRatioMean_%s_%d\tObservedIsoRatioSD_%s_%d\tTheoreticalIsoRatio_%s_%d"%(isoRatio.type, abs(isoRatio.subs), isoRatio.type, abs(isoRatio.subs), isoRatio.type, abs(isoRatio.subs)))
-
-        csvFile.write("\n")
-
-        for chromPeak in sorted(chromPeaks, key=lambda x: x.LPeakCenter):
-
-            hetIso = []
-            for hetAtom in chromPeak.heteroIsotopologues:
-                pIso = chromPeak.heteroIsotopologues[hetAtom]
-                for hetAtomCount in pIso:
-                    hetIso.append("%s%d (scans: %d, obs: %.1f%%, exp: %.1f%%)" % (
-                        hetAtom, hetAtomCount, len(pIso[hetAtomCount]), 100. * mean([d[1] for d in pIso[hetAtomCount]]),
-                        100. * mean([d[2] for d in pIso[hetAtomCount]])))
-            if len(hetIso) == 0:
-                hetIso = ""
-            else:
-                hetIso = ", ".join(hetIso)
-
-            addsF = ",".join(chromPeak.adducts)
-            if len(addsF) == 0:
-                addsF = "-"
-
-            fDesc = ",".join(chromPeak.fDesc)
-
-            scanEvent = ""
-            if chromPeak.ionMode == "+":
-                scanEvent = self.positiveScanEvent
-            elif chromPeak.ionMode == "-":
-                scanEvent = self.negativeScanEvent
-
-            mzDelta = 0.
-            if self.metabolisationExperiment:
-                mzDelta = configTracers[chromPeak.tracer].mzDelta
-            else:
-                mzDelta = self.xOffset
-
-            minMZDiffError=-1
-            maxMZDiffError=-1
-            quantLow20=-1
-            quantHig20=-1
-            try:
-                minMZDiffError=min(chromPeak.mzDiffErrors.vals)
-                maxMZDiffError=max(chromPeak.mzDiffErrors.vals)
-                quantLow20=np.percentile(chromPeak.mzDiffErrors.vals, 20)
-                quantHig20=np.percentile(chromPeak.mzDiffErrors.vals, 80)
-            except:
-                pass
-
-            csvFile.write("\t".join([str(x) for x in [chromPeak.id,
-                                                      chromPeak.mz,
-                                                      chromPeak.lmz,
-                                                      (chromPeak.lmz-chromPeak.mz-chromPeak.tmz) * 1000000. / chromPeak.mz,
-                                                      chromPeak.assignedMZs,
-                                                      chromPeak.mzDiffErrors.mean,
-                                                      chromPeak.mzDiffErrors.sd,
-                                                      minMZDiffError,
-                                                      maxMZDiffError,
-                                                      quantLow20,
-                                                      quantHig20,
-                                                      chromPeak.NPeakCenterMin,
-                                                      chromPeak.xCount,
-                                                      chromPeak.loading,
-                                                      scanEvent,
-                                                      chromPeak.ionMode,
-                                                      chromPeak.tracerName,
-                                                      chromPeak.NPeakArea,
-                                                      chromPeak.LPeakArea,
-                                                      chromPeak.NPeakAbundance,
-                                                      chromPeak.LPeakAbundance,
-                                                      chromPeak.NPeakArea / chromPeak.LPeakArea,
-                                                      chromPeak.peaksRatio,
-                                                      chromPeak.NBorderLeft,
-                                                      chromPeak.NBorderRight,
-                                                      chromPeak.LBorderLeft,
-                                                      chromPeak.LBorderRight,
-                                                      chromPeak.fGroupID,
-                                                      chromPeak.peaksCorr,
-                                                      chromPeak.artificialEICLShift,
-                                                      addsF,
-                                                      fDesc,
-                                                      hetIso,
-                                                      chromPeak.comments]]))
-            for isoRatio in chromPeak.isotopeRatios:
-                observedMean=isoRatio.observedRatioMean
-                if observedMean is None:
-                    observedMean=-1.
-                observedSD=isoRatio.observedRatioSD
-                if observedSD is None:
-                    observedSD=-1.
-                theoreticalRatio=isoRatio.theoreticalRatio
-                if theoreticalRatio is None:
-                    theoreticalRatio=-1.
-
-                csvFile.write("\t%.5f\t%.5f\t%.5f"%(observedMean, observedSD, theoreticalRatio))
-            csvFile.write("\n")
+            for chromPeak in SQLSelectAsObject(curs, "SELECT %s FROM chromPeaks"%(", ".join(["%s AS %s"%(cols[col], col) for col in cols.keys()])), newObject=Bunch):
+                tsvFile.write("\t".join(str(chromPeak.__dict__.get(k)) for k in cols.keys()))
+                tsvFile.write("\n")
 
 
 
-        csvFile.write("## MetExtract II %s\n"%(Bunch(MetExtractVersion=self.meVersion, RVersion=self.rVersion, UUID_ext=self.processingUUID).dumpAsJSon().replace("\"", "'")))
+            tsvFile.write("## MetExtract II %s\n"%(Bunch(MetExtractVersion=self.meVersion, RVersion=self.rVersion, UUID_ext=self.processingUUID).dumpAsJSon().replace("\"", "'")))
 
-        processingParams=Bunch()
-        processingParams.experimentOperator=self.experimentOperator
-        processingParams.experimentID=self.experimentID
-        processingParams.experimentComments=self.experimentComments
-        processingParams.experimentName=self.experimentName
-        csvFile.write("## Experiment parameters %s\n"%(processingParams.dumpAsJSon().replace("\"", "'")))
+            processingParams=Bunch()
+            processingParams.experimentOperator=self.experimentOperator
+            processingParams.experimentID=self.experimentID
+            processingParams.experimentComments=self.experimentComments
+            processingParams.experimentName=self.experimentName
+            tsvFile.write("## Experiment parameters %s\n"%(processingParams.dumpAsJSon().replace("\"", "'")))
 
-        processingParams=Bunch()
-        processingParams.startTime=self.startTime
-        processingParams.stopTime=self.stopTime
-        processingParams.positiveScanEvent=self.positiveScanEvent
-        processingParams.negativeScanEvent=self.negativeScanEvent
-        processingParams.metabolisationExperiment=self.metabolisationExperiment
-        processingParams.intensityThreshold=self.intensityThreshold
-        processingParams.intensityCutoff=self.intensityCutoff
-        processingParams.maxLoading=self.maxLoading
-        processingParams.xCounts=self.xCountsString
-        processingParams.xoffset=self.xOffset
-        processingParams.ppm=self.ppm
-        processingParams.isotopicPatternCountLeft=self.isotopicPatternCountLeft
-        processingParams.isotopicPatternCountRight=self.isotopicPatternCountRight
-        processingParams.lowAbundanceIsotopeCutoff=self.lowAbundanceIsotopeCutoff
-        processingParams.intensityErrorN=self.intensityErrorN
-        processingParams.intensityErrorL=self.intensityErrorL
-        processingParams.purityN=self.purityN
-        processingParams.purityL=self.purityL
+            processingParams=Bunch()
+            processingParams.startTime=self.startTime
+            processingParams.stopTime=self.stopTime
+            processingParams.positiveScanEvent=self.positiveScanEvent
+            processingParams.negativeScanEvent=self.negativeScanEvent
+            processingParams.metabolisationExperiment=self.metabolisationExperiment
+            processingParams.intensityThreshold=self.intensityThreshold
+            processingParams.intensityCutoff=self.intensityCutoff
+            processingParams.maxLoading=self.maxLoading
+            processingParams.xCounts=self.xCountsString
+            processingParams.xoffset=self.xOffset
+            processingParams.ppm=self.ppm
+            processingParams.isotopicPatternCountLeft=self.isotopicPatternCountLeft
+            processingParams.isotopicPatternCountRight=self.isotopicPatternCountRight
+            processingParams.lowAbundanceIsotopeCutoff=self.lowAbundanceIsotopeCutoff
+            processingParams.intensityErrorN=self.intensityErrorN
+            processingParams.intensityErrorL=self.intensityErrorL
+            processingParams.purityN=self.purityN
+            processingParams.purityL=self.purityL
 
-        #2. Results clustering
-        processingParams.minSpectraCount=self.minSpectraCount
-        processingParams.clustPPM=self.clustPPM
+            #2. Results clustering
+            processingParams.minSpectraCount=self.minSpectraCount
+            processingParams.clustPPM=self.clustPPM
 
-        #3. Peak detection
-        processingParams.chromPeakPPM=self.chromPeakPPM
+            #3. Peak detection
+            processingParams.chromPeakPPM=self.chromPeakPPM
 
-        processingParams.eicSmoothingWindow=self.eicSmoothingWindow
-        processingParams.eicSmoothingWindowSize=self.eicSmoothingWindowSize
-        processingParams.eicSmoothingPolynom=self.eicSmoothingPolynom
-        processingParams.scales=self.scales
-        processingParams.minCorr=self.minPeakCorr
-        processingParams.minCorrelationConvolution=self.minCorrelation
-        processingParams.minCorrelationConnections=self.minCorrelationConnections
-        csvFile.write("## Data processing parameters %s\n"%(processingParams.dumpAsJSon().replace("\"", "'")))
+            processingParams.eicSmoothingWindow=self.eicSmoothingWindow
+            processingParams.eicSmoothingWindowSize=self.eicSmoothingWindowSize
+            processingParams.eicSmoothingPolynom=self.eicSmoothingPolynom
+            processingParams.scales=self.scales
+            processingParams.minCorr=self.minPeakCorr
+            processingParams.minCorrelationConvolution=self.minCorrelation
+            processingParams.minCorrelationConnections=self.minCorrelationConnections
+            tsvFile.write("## Data processing parameters %s\n"%(processingParams.dumpAsJSon().replace("\"", "'")))
 
-        csvFile.close()
 
     # plot all detected feature pairs as the first results page in the PDF
     def generateFeaturePairOverviewMap(self, chromPeaks, pdf):
@@ -2252,7 +2147,6 @@ class RunIdentification:
             self.postMessageToProgressWrapper("text", "Parsing chromatogram file")
 
             mzxml = self.parseMzXMLFile()
-            newMZXMLData = {}
 
 
             # endregion
@@ -2264,11 +2158,6 @@ class RunIdentification:
 
             if self.metabolisationExperiment:
                 self.printMessage("Tracer: %s" % self.configuredTracer.name, type="info")
-
-                ##################################################################################################
-                # Attention: delta mz for one labelling atom is always saved in the member variable self.xOffset #
-                ##################################################################################################
-
                 self.xOffset = getIsotopeMass(self.configuredTracer.isotopeB)[0] - getIsotopeMass(self.configuredTracer.isotopeA)[0]
 
             else:
@@ -2276,6 +2165,22 @@ class RunIdentification:
                 pass
             # endregion
 
+
+
+
+            rules = [
+                PresenceRule(otherIsotopolog="[13C]-2",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.1, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-4",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.1, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-6",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.1, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-8",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.1, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-10", minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.0, 10]}),
+                PresenceRule(otherIsotopolog="[13C]-12", minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.0, 10]}),
+                PresenceRule(otherIsotopolog="[13C]-1",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-2": [0.01, 0.8]}),
+                PresenceRule(otherIsotopolog="[13C]-3",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-4": [0.01, 0.8]}),
+                PresenceRule(otherIsotopolog="[13C]-5",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-6": [0.01, 0.8]}),
+                PresenceRule(otherIsotopolog="[13C]-7",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-8": [0.01, 0.8]}),
+                 AbsenceRule(otherIsotopolog="[13C]1",   maxRatio=0.01)
+            ]
 
 
 
@@ -2290,7 +2195,7 @@ class RunIdentification:
                 self.postMessageToProgressWrapper("value",0.25 * curVal)
                 self.postMessageToProgressWrapper("text", "Extracting signal pairs (%s)" % (text))
 
-            mzs, negFound, posFound = self.findSignalPairs(mzxml, self.configuredTracer, reportFunction)
+            mzs, negFound, posFound = self.findSignalPairs(mzxml, self.configuredTracer, rules, reportFunction)
             self.writeSignalPairsToDB(mzs, mzxml)
 
             self.printMessage("Extracting signal pairs done. pos: %d neg: %d mzs (including mismatches)" % (posFound, negFound), type="info")
@@ -2338,7 +2243,7 @@ class RunIdentification:
                 self.postMessageToProgressWrapper("value", 0.75  + 0.05 * curVal)
                 self.postMessageToProgressWrapper("text", "Grouping feature pairs (%s)" % (text))
 
-            self.groupFeaturePairsUntargetedAndWriteToDB(chromPeaks, mzxml, self.configuredTracer, tracerID, reportFunction)
+            #self.groupFeaturePairsUntargetedAndWriteToDB(chromPeaks, mzxml, reportFunction)
             # endregion
 
             # Log time used for processing of individual files
@@ -2357,36 +2262,20 @@ class RunIdentification:
             # region 8. Write results to files (95-100%, without progress indicator)
             ######################################################################################
 
-            # W.1 Save results to new MzXML file (intermediate step) (95-100%)
-
-            if self.writeMZXML:
-                self.postMessageToProgressWrapper("value", 0.95)
-                self.postMessageToProgressWrapper("text", "Writing results to mzXML..")
-
-                self.writeResultsToNewMZXMLIntermediateObject(mzxml, newMZXMLData, chromPeaks)
-            # endregion
-
-
-
-            self.postMessageToProgressWrapper("text", "Writing results to mzXML..")
-
-            # region W.2 Write results to TSV File
+            # W.1 Write results to TSV File
             ##########################################################################################
             if self.writeTSV:
                 self.postMessageToProgressWrapper("text", "Writing results to TSV..")
-
                 self.writeResultsToTSVFile(self.file)
-            # endregion
 
-            # region W.2 Write results to TSV File
+            # W.2 Write results to featureML File
             ##########################################################################################
             if self.writeFeatureML:
                 self.postMessageToProgressWrapper("text", "Writing results to featureML..")
 
                 self.writeResultsToFeatureML(self.file)
-            # endregion
 
-            # region W.3 Write resutls to PDF
+            # W.3 Write resutls to PDF
             ##########################################################################################
             if self.writePDF:
                 self.postMessageToProgressWrapper("text", "Writing results to PDF")
@@ -2396,14 +2285,6 @@ class RunIdentification:
                     self.postMessageToProgressWrapper("text", "Writing results to PDF (%s)" % text)
 
                 self.writeResultsToPDF(mzxml, reportFunction=reportFunction)
-            # endregion
-
-            # region W.4 Save all results to new MzXML file
-            ##########################################################################################
-            if self.writeMZXML:
-                self.postMessageToProgressWrapper("text", "Writing results to new mzXML file")
-
-                self.writeIntermediateMZXMLDataToNewMZXMLFile(mzxml, newMZXMLData)
             # endregion
 
             mzxml.freeMe();
