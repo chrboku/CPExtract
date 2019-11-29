@@ -1,6 +1,7 @@
 from formulaTools import formulaTools
 from utils import Bunch
 
+import abc
 
 _formulaTools=formulaTools()
 
@@ -13,6 +14,10 @@ class Rule:
 
     def getChromatographicPeaks(self):
         return []
+
+    @abc.abstractmethod
+    def getMessage(self):
+        pass
 
 
 
@@ -57,6 +62,9 @@ class PresenceRule(Rule):
         else:
             return []
 
+    def getMessage(self):
+        return "Isotopolog %s is present and its ratios check out as well"%(self.otherIsotopolog)
+
 
 
 
@@ -78,6 +86,8 @@ class AbsenceRule(Rule):
             else:
                 return False
 
+    def getMessage(self):
+        return "Isotopolog %s is not present or below the limit (%.2f)"%(self.otherIsotopolog, self.maxRatio)
 
 
 class RuleMatcher:

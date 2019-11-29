@@ -2169,16 +2169,18 @@ class RunIdentification:
 
 
             rules = [
-                PresenceRule(otherIsotopolog="[13C]-2",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.1, 3]}),
-                PresenceRule(otherIsotopolog="[13C]-4",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.1, 3]}),
-                PresenceRule(otherIsotopolog="[13C]-6",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.1, 3]}),
-                PresenceRule(otherIsotopolog="[13C]-8",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.1, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-2",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.01, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-4",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.01, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-6",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.01, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-8",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.01, 3]}),
+
                 PresenceRule(otherIsotopolog="[13C]-10", minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.0, 10]}),
                 PresenceRule(otherIsotopolog="[13C]-12", minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.0, 10]}),
-                PresenceRule(otherIsotopolog="[13C]-1",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-2": [0.01, 0.8]}),
-                PresenceRule(otherIsotopolog="[13C]-3",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-4": [0.01, 0.8]}),
-                PresenceRule(otherIsotopolog="[13C]-5",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-6": [0.01, 0.8]}),
-                PresenceRule(otherIsotopolog="[13C]-7",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 0.5], "[13C]-8": [0.01, 0.8]}),
+                PresenceRule(otherIsotopolog="[13C]-1",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-2": [0.01, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-3",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-4": [0.01, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-5",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-6": [0.01, 3]}),
+                PresenceRule(otherIsotopolog="[13C]-7",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-8": [0.01, 3]}),
+
                  AbsenceRule(otherIsotopolog="[13C]1",   maxRatio=0.01)
             ]
 

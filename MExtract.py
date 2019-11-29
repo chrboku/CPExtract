@@ -235,6 +235,7 @@ from xml.parsers.expat import ExpatError
 from optparse import OptionParser
 #from hashlib import sha256
 import csv
+import math
 
 
 #</editor-fold>
@@ -3672,12 +3673,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.closeCurrentOpenResultsFile()
         if self.openFileAsCurrentOpenResultsFile(b.file):
 
-            it = QtGui.QTreeWidgetItem(["MZs"])
-            it.type = "MZs"
-            it.data=Bunch()
-            self.ui.res_ExtractedData.addTopLevelItem(it)
-            count = 0
-            children=[]
             pw=ProgressWrapper(pwCount=5)
 
 
@@ -3702,6 +3697,12 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 traceback.print_exc()
 
             try:
+                it = QtGui.QTreeWidgetItem(["MZs"])
+                it.type = "mzs"
+                it.data=Bunch()
+                self.ui.res_ExtractedData.addTopLevelItem(it)
+                count = 0
+                children=[]
                 ## Fetched matched MZ signal pairs
                 pw.setText("Fetching mzs", i=1)
                 numberOfMZs=0
@@ -3709,14 +3710,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     numberOfMZs=row.co
                 pw.setMaxu(numberOfMZs, i=1)
 
-                if numberOfMZs<5000:
+                if numberOfMZs<50000:
 
                     pw.setText("Fetching mzs (%d)"%numberOfMZs, i=1)
 
-                    for mzRes in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT id, mz, xcount, scanid, loading, scantime, intensity FROM MZs ORDER BY scanid"):
-                        d = QtGui.QTreeWidgetItem(it, [str(s) for s in [mzRes.mz, mzRes.xcount, mzRes.scanid, "%.2f min / %.2f sec"%(mzRes.scantime/60., mzRes.scantime), mzRes.loading, "%.1f"%mzRes.intensity]])
+                    for mzRes in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT id, mz, similarityObject, scanid, scantime, loading, ionMode, type, otherIsotopologs, intensity FROM MZs ORDER BY mz"):
+                        d = QtGui.QTreeWidgetItem(it, [str(s) for s in [mzRes.mz, "%.2f min / %.2f sec"%(mzRes.scantime/60., mzRes.scantime), mzRes.similarityObject, mzRes.scanid, "%s / %s"%(mzRes.loading, mzRes.ionMode), "%.1f"%mzRes.intensity]])
                         d.type = "mz"
-                        d.data=mzRes
+                        d.data=Bunch()
                         children.append(d)
                         count += 1
 
@@ -3736,7 +3737,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             try:
                 it = QtGui.QTreeWidgetItem(["MZ bins"])
-                it.type = "MZBins"
+                it.type = "mzbins"
+                it.data = Bunch()
                 self.ui.res_ExtractedData.addTopLevelItem(it)
                 mzbins = []
 
@@ -3752,7 +3754,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     for mzbin in mzbins:
                         d = QtGui.QTreeWidgetItem([str(mzbin.mz)])
                         d.type = "mzbin"
-                        d.data=Bunch
+                        d.data=Bunch()
                         children.append(d)
                         countinner = 0
                         minInner = 1000000.
@@ -3762,18 +3764,19 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
 
                         for mzRes in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT id, mz, "
-                                                                                         "xcount, "
+                                                                                         "similarityObject, "
                                                                                          "scanid, "
                                                                                          "loading, "
                                                                                          "scantime, "
+                                                                                         "type, "
                                                                                          "intensity "
                                                                                          "FROM MZs m, MZBinsKids k "
-                                                                                         "WHERE m.id==k.mzID AND k.mzbinID=%d ORDER BY m.scanid" % mzbin.id):
+                                                                                         "WHERE m.id==k.mzID AND k.mzbinID=%d ORDER BY scantime" % mzbin.id):
                             minInner = min(float(mzRes.mz), minInner)
                             maxInner = max(maxInner, mzRes.mz)
-                            xcount = mzRes.xcount
-                            if numberOfMZs<maxMZsFetch:
-                                dd = QtGui.QTreeWidgetItem([str(s) for s in [mzRes.mz, mzRes.xcount, mzRes.scanid, "%.2f min / %.2f sec"%(mzRes.scantime/60., mzRes.scantime), mzRes.loading, "%.1f"%mzRes.intensity]])
+                            similarityObject = mzRes.similarityObject
+                            if numberOfMZs<50000:
+                                dd = QtGui.QTreeWidgetItem([str(s) for s in [mzRes.mz, "%.2f min / %.2f sec"%(mzRes.scantime/60., mzRes.scantime), mzRes.similarityObject, mzRes.scanid, mzRes.loading, "%.1f"%mzRes.intensity]])
                                 dd.type = "mz"
                                 dd.data=mzRes
                                 d.addChild(dd)
@@ -3781,7 +3784,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                         d.setText(0, "%.5f (%d)" % (mzbin.mz, countinner))
                         d.setText(1, "%.4f" % ((maxInner - minInner) * 1000000. / minInner))
-                        d.setText(2, "%s" % xcount)
+                        d.setText(2, "%s" % similarityObject)
                         count += 1
                         pw.setValueu(count, i=2)
                     pw.setText("%d MZBins fetched"%count, i=2)
@@ -3797,11 +3800,15 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 traceback.print_exc()
 
 
+
+
+
             try:
+                fT=formulaTools()
                 ## Load feature pairs
-                it = QtGui.QTreeWidgetItem(["Feature pairs", "0"])
-                it.type = "Features"
-                it.data=Bunch
+                it = QtGui.QTreeWidgetItem(["Features"])
+                it.type = "feature"
+                it.data=Bunch()
                 self.ui.res_ExtractedData.addTopLevelItem(it)
 
                 numberOfFeaturePairs=0
@@ -3813,16 +3820,36 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                 count = 0
                 children=[]
-                for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT id, mz, PeakCenter, PeakCenterMin, PeakScale, loading, ionMode, PeakArea FROM chromPeaks ORDER BY PeakCenter, mz"):
+                for row in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT id, mz, PeakCenter, PeakCenterMin, PeakScale, loading, ionMode, PeakArea, foundMatches FROM chromPeaks ORDER BY PeakCenter, mz"):
 
                     xp = Bunch(id=row.id, mz=float(row.mz), peakCenter=row.PeakCenter,
                                rt=row.PeakCenterMin, peakScale=row.PeakScale, loading=row.loading,
-                               ionMode=row.ionMode, peakArea=row.PeakArea)
+                               ionMode=row.ionMode, peakArea=row.PeakArea, foundMatches=loads(base64.b64decode(row.foundMatches)))
 
                     d = QtGui.QTreeWidgetItem(["%.5f" % xp.mz + "   /" + str(xp.ionMode) + str(xp.loading),
-                                               "%.2f" % (xp.rt),
+                                               "%.2f min" % (xp.rt),
                                                "%.0f" % (xp.peakScale),
                                                "%.3f" % (xp.peakArea)])
+
+                    xps = deepcopy(xp)
+                    xps.mz = xp.mz
+                    xps.foundMatches = {}
+                    dd = QtGui.QTreeWidgetItem([str(s) for s in ["X", "%.2f min / %.2f sec" % (xps.rt, xps.rt * 60.)]])
+                    dd.type = "feature"
+                    dd.data = xps
+                    d.addChild(dd)
+
+                    for k in natSort(xp.foundMatches.keys()):
+                        mz=xp.mz + fT.calcIsotopologOffsetWeight(fT.parseFormula(k)) / xp.loading
+
+                        xps=deepcopy(xp)
+                        xps.mz=mz
+                        xps.foundMatches={}
+                        dd = QtGui.QTreeWidgetItem([str(s) for s in [k, "%.2f min / %.2f sec" % (xps.rt , xps.rt*60.)]])
+                        dd.type = "feature"
+                        dd.data = xps
+                        d.addChild(dd)
+
 
                     d.type = "feature"
                     d.data = xp
@@ -3830,7 +3857,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     count += 1
 
                     pw.setValueu(count, i=3)
-                pw.setTextu("%d feature pairs fetched"%numberOfFeaturePairs, i=3)
+                pw.setTextu("%d features fetched"%numberOfFeaturePairs, i=3)
 
                 it.addChildren(children)
                 it.setExpanded(True)
@@ -3964,1572 +3991,135 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             return dmz, purN, purL
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def selectedResChanged(self):
 
-        annotationPPM = self.ui.doubleSpinBox_isotopologAnnotationPPM.value()
-
-        for i in range(self.ui.res_ExtractedData.topLevelItemCount()):
-            self.deColorQTreeWidgetItem(self.ui.res_ExtractedData.topLevelItem(i))
-
+        ## Get selected items
         selectedItems = self.ui.res_ExtractedData.selectedItems()
 
-        changePlots = False
+        ################################################################################################################
+        ################################################################################################################
+        ## Check if all plot types are the same, if not return
+        plotTypes=set()
         for item in selectedItems:
-            if hasattr(item, "myType"):
-                if item.myType == "parameter":
-                    continue
-                else:
-                    changePlots = True
-        if not changePlots:
+            if not (hasattr(item, "type")):                                     continue
+            if item.type == "mzs" or item.type == "mz":                         plotTypes.add("mzs")
+            if item.type == "mzbins" or item.type == "mzbin":                   plotTypes.add("mzbins")
+            if item.type == "features" or item.type == "feature":               plotTypes.add("features")
+            if item.type == "featuregroups" or item.type == "featuregroup":   plotTypes.add("featuregroups")
+            if item.type.lower().startswith("diagnostic"):                      plotTypes.add("diagnostic")
+        if len(plotTypes) > 1:
+            QtGui.QMessageBox.warning(self, "MetExtract","Selecting different result types in not supported. Please select only one or multipel MZs, MZBins, FeaturePairs or FeatureGroups at a time",QtGui.QMessageBox.Ok)
+            return
+        if len(plotTypes)==0:
             return
 
+
+        ################################################################################################################
+        ################################################################################################################
+        ## Draw new plots
+
+        ## Clean old illustrations
         self.clearPlot(self.ui.pl1)
         self.clearPlot(self.ui.pl2A)
         self.clearPlot(self.ui.pl2B)
         self.clearPlot(self.ui.pl3)
+        for i in range(self.ui.res_ExtractedData.topLevelItemCount()):
+            self.deColorQTreeWidgetItem(self.ui.res_ExtractedData.topLevelItem(i))
 
+        ## Get parameters
+        eicPPM = self.ui.wavelet_EICppm.value()
+        annotationPPM = self.ui.doubleSpinBox_isotopologAnnotationPPM.value()
+        posScanEvent = str(self.ui.positiveScanEvent.currentText())
+        negScanEvent = str(self.ui.negativeScanEvent.currentText)
+
+        ## Set some variables
         useColi = 0
-        maxIntX = 0
-        maxIntY = 0
-        minIntX = 0
-        minIntY = 0
-        minMZ = 1000000
-        maxMZ = 0
-        minMZH = 0
-        maxMZH = 0
-        minTime = 1000
-        maxTime = 1
-        x_vals = []
-        y_vals = []
-        mzs = []
-        peaks = []
-        plotTypes = set()
-        selFeatureGroups = []
-
-        featuresPosSelected = False
-        for item in selectedItems:
-            if not (hasattr(item, "myType")):
-                continue
-
-            if item.myType == "MZs" or item.myType == "mz":
-                plotTypes.add("MZs")
-            if item.myType == "MZBins" or item.myType == "mzbin":
-                plotTypes.add("MZBins")
-            if item.myType == "Features" or item.myType == "feature":
-                plotTypes.add("Features")
-            if item.myType == "Feature Groups" or item.myType == "feature group":
-                plotTypes.add("Feature Groups")
-            if item.myType.lower().startswith("diagnostic"):
-                plotTypes.add("diagnostic")
+        fT=formulaTools()
+        xlims=None
 
 
-            if item.myType == "Features" or item.myType == "feature":
-                if hasattr(item, "myData"):
-                    cp = item.myData
-                    if cp.ionMode == "-":
-                        pass
-                    else:
-                        featuresPosSelected = True
-
-        if len(plotTypes) > 1:
-            QtGui.QMessageBox.warning(self, "MetExtract","Selecting different result types in not supported. Please select only one or multipel MZs, MZBins, FeaturePairs or FeatureGroups at a time",QtGui.QMessageBox.Ok)
-            self.clearPlot(self.ui.pl1)
-            return
-
+        ## iterate selected items
         for selIndex, item in enumerate(selectedItems):
-            if not (hasattr(item, "myType")):
+            if not (hasattr(item, "type")):
                 continue
 
-            #<editor-fold desc="#mz result">
-            if item.myType == "MZs" or item.myType == "mz":
-                plotTypes.add("MZs")
-                self.ui.res_ExtractedData.setHeaderLabels(QtCore.QStringList(["MZ", "Xn", "Scan id", "Rt", "Charge", "Intensity", "", "", "", "", ""]))
-
-                t = item
-                if len(x_vals) == 0:
-                    x = []
-                    y = []
-                    if t.myType == "mz":
-                        t = t.parent()
-                    for j in range(t.childCount()):
-                        child = t.child(j)
-                        assert child.myType == "mz"
-                        x.append(child.myData.scantime / 60.)
-                        y.append(child.myData.mz)
-
-                    maxIntY = max(y)
-                    maxIntX = max(x)
-
-                    x_vals = [x]
-                    y_vals = [y]
-
-                if item.myType == "mz":
-                    if len(x_vals) == 1:
-                        x_vals.append([])
-                        y_vals.append([])
-                    x_vals[1].append(item.myData.scantime / 60.)
-                    y_vals[1].append(item.myData.mz)
-            #</editor-fold>
-
-            #<editor-fold desc="#mzbin results">
-            elif item.myType == "MZBins" or item.myType == "mzbin":
-                self.ui.res_ExtractedData.setHeaderLabels(QtCore.QStringList(["MZ", "Delta ppm", "Xn", "", "", "", "", "", "", "", ""]))
-                if item.myType == "MZBins":
-                    plotTypes.add("MZBins")
-                    for i in range(item.childCount()):
-                        kid = item.child(i)
-                        assert kid.myType == "mzbin"
-                        x = []
-                        y = []
-                        for j in range(kid.childCount()):
-                            child = kid.child(j)
-                            assert child.myType == "mz"
-                            x.append(child.myData.scantime / 60.)
-                            y.append(child.myData.mz)
-                        x_vals.append(x)
-                        y_vals.append(y)
-                    if(len(x_vals)>0):
-                        maxIntX = max(max(x_vals), maxIntX)
-                        maxIntY = max(max(y_vals), maxIntY)
-                    else:
-                        maxIntX=1
-                        maxIntY=1
-
-                elif item.myType == "mzbin":
-                    plotTypes.add("mzbin")
-                    x = []
-                    y = []
-                    if item.myType == "mzbin" and len(x_vals) == 0:
-                        t = item.parent()
-                        for o in range(t.childCount()):
-                            childo = t.child(o)
-                            for j in range(childo.childCount()):
-                                childj = childo.child(j)
-
-                                assert childj.myType == "mz"
-                                x.append(childj.myData.scantime / 60.)
-                                y.append(childj.myData.mz)
-                        x_vals.append(x)
-                        y_vals.append(y)
-
-                    x = []
-                    y = []
-                    for j in range(item.childCount()):
-                        child = item.child(j)
-                        assert child.myType == "mz"
-                        x.append(child.myData.scantime / 60.)
-                        y.append(child.myData.mz)
-                    x_vals.append(x)
-                    y_vals.append(y)
-                if len(x_vals)>0:
-                    maxIntX = max(max(x_vals), maxIntX)
-                    maxIntY = max(max(y_vals), maxIntY)
-                else:
-                    maxIntX=1
-                    maxIntY=1
-            #</editor-fold>
-
-            #<editor-fold desc="#feature results">
-            elif item.myType == "Features" or item.myType == "feature":
-                self.ui.chromPeakName.setText("")
-
-                self.ui.res_ExtractedData.setHeaderLabels(QtCore.QStringList(
-                    ["MZ (/Ionmode Z)", "Rt min", "Xn", "Adducts / in-source fragments / hetero atoms", "Scale M / M'", "Peak cor", "M:M' peaks ratio / area ratio", "Area M / M'", "Scans", "LMZ", "Tracer"]))
-
-                if item.myType == "Features":
-                    mzs = []
-                    rts = []
-                    plotTypes.add("Features")
-                    for i in range(item.childCount()):
-                        child = item.child(i)
-                        assert child.myType == "feature"
-                        mzs.append(child.myData.mz);
-                        rts.append(child.myData.NPeakCenterMin / 60.)
-                    self.drawPlot(self.ui.pl1, plotIndex=0, x=rts, y=mzs, ylab="m/z", useCol=0, scatter=True,
-                                  plot=False)
-
-                if item.myType == "feature":
-                    cp = item.myData
-                    plotTypes.add("feature")
-                    mzs.append(cp.mz)
-                    peaks.append(cp.NPeakCenterMin / 60.)
-                    xic = []
-                    xicL = []
-                    times = []
-                    maxE=1
-
-                    invert=1
-                    if self.ui.negEIC.isChecked():
-                        invert=-1
-
-                    for row in self.currentOpenResultsFile.curs.execute(
-                                    "SELECT xic, xicL, xicfirstiso, xicLfirstiso, xicLfirstisoconjugate, xic_smoothed, xicL_smoothed, times, allPeaks, xic_baseline, xicL_baseline FROM XICs WHERE id==%d" % cp.eicID):
-                        xic                   = [float(t) for t in row[0].split(";")]
-                        xicL                  = [float(t) for t in row[1].split(";")]
-                        xicfirstiso           = [float(t) for t in row[2].split(";")]
-                        xicLfirstiso          = [float(t) for t in row[3].split(";")]
-                        xicLfirstisoconjugate = [float(t) for t in row[4].split(";")]
-                        xic_smoothed          = [float(t) for t in row[5].split(";")]
-                        xicL_smoothed         = [float(t) for t in row[6].split(";")]
-                        offset = cp.NPeakCenterMin / 60. if self.ui.setPeakCentersToZero.isChecked() else 0
-                        times = [float(t) / 60. - offset for t in row[7].split(";")]
-                        allPeaks = loads(base64.b64decode(str(row[8])))
-                        xic_baseline          = [float(t) for t in row[9].split(";")]
-                        xicL_baseline         = [float(t) for t in row[10].split(";")]
-
-
-                    if self.ui.scaleFeatures.isChecked():
-                        s = int(cp.NPeakCenter - cp.NBorderLeft * 1)
-                        e = int(cp.NPeakCenter + cp.NBorderRight * 1)
-                        maxP = s + max(range(e - s), key=lambda x: xic[s + x])
-                        maxE  = mean(xic[(maxP - 3):(maxP + 3)])
-                        maxEL = mean(xicL[(maxP - 3):(maxP + 3)])
-                        if maxE == 0:
-                            maxE=1
-                        if maxEL == 0:
-                            maxEL=1
-                        if not self.ui.scaleLabelledFeatures.isChecked():
-                            maxEL=maxE
-
-                        xic                   = [u / maxE for u in xic]
-                        xicfirstiso           = [u / maxE for u in xicfirstiso]
-                        xicL                  = [u / maxEL for u in xicL]
-                        xicLfirstiso          = [u / maxEL for u in xicLfirstiso]
-                        xicLfirstisoconjugate = [u / maxEL for u in xicLfirstisoconjugate]
-                        xic_smoothed          = [u / maxE for u in xic_smoothed]
-                        xicL_smoothed         = [u / maxEL for u in xicL_smoothed]
-                        xic_baseline          = [u /maxE for u in xic_baseline]
-                        xicL_baseline         = [u / maxEL for u in xicL_baseline]
-
-                    xicL                  = [invert*u for u in xicL]
-                    xicLfirstiso          = [invert*u for u in xicLfirstiso]
-                    xicLfirstisoconjugate = [invert*u for u in xicLfirstisoconjugate]
-                    xicL_smoothed         = [invert*u for u in xicL_smoothed]
-                    xicL_baseline         = [invert*u for u in xicL_baseline]
-
-                    if self.ui.flattenXIC.isChecked():
-                        ps = min(int(cp.NPeakCenter - cp.NPeakScale * 2), int(cp.LPeakCenter - cp.LPeakScale * 2))
-                        pe = max(int(cp.NPeakCenter + cp.NPeakScale * 2), int(cp.LPeakCenter + cp.LPeakScale * 2))
-                    else:
-                        ps=0
-                        pe=len(times)
-                    try:
-                        minTime = min(minTime, min(
-                            times[int(cp.NPeakCenter - cp.NPeakScale * 1): int(cp.NPeakCenter + cp.NPeakScale * 1)]))
-                        maxTime = max(maxTime, max(
-                            times[int(cp.NPeakCenter - cp.NPeakScale * 1): int(cp.NPeakCenter + cp.NPeakScale * 1)]))
-                        maxIntY = max(maxIntY, max(
-                            xic[int(cp.NPeakCenter - cp.NPeakScale * 1): int(cp.NPeakCenter + cp.NPeakScale * 1)]))
-                        minIntY = min(minIntY, min(
-                            xicL[int(cp.LPeakCenter - cp.LPeakScale * 1): int(cp.LPeakCenter + cp.LPeakScale * 1)]))
-                    except:
-                        pass
-
-                    item.setBackgroundColor(0, QColor(predefinedColors[useColi % len(predefinedColors)]))
-                    item.setBackgroundColor(1, QColor(predefinedColors[useColi % len(predefinedColors)]))
-                    item.setBackgroundColor(2, QColor(predefinedColors[useColi % len(predefinedColors)]))
-                    item.setBackgroundColor(3, QColor(predefinedColors[useColi % len(predefinedColors)]))
-                    item.setBackgroundColor(4, QColor(predefinedColors[useColi % len(predefinedColors)]))
-                    item.setBackgroundColor(5, QColor(predefinedColors[useColi % len(predefinedColors)]))
-                    item.setBackgroundColor(6, QColor(predefinedColors[useColi % len(predefinedColors)]))
-                    item.setBackgroundColor(7, QColor(predefinedColors[useColi % len(predefinedColors)]))
-
-                    self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xic[ps:pe],
-                                  fill=[int(cp.NPeakCenter - cp.NBorderLeft),
-                                        int(cp.NPeakCenter + cp.NBorderRight)], rearrange=len(selectedItems) == 1,
-                                  label="M: %.4f (%s, %s)"%(cp.mz, cp.xCount, cp.ionMode), useCol=useColi)
-
-                    if self.ui.checkBox_showBaseline.isChecked():
-                        self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xic_baseline[ps:pe],
-                                      fill=[int(cp.LPeakCenter - cp.LBorderLeft),
-                                            int(cp.LPeakCenter + cp.LBorderRight)], rearrange=len(selectedItems) == 1,
-                                      label=None, useCol=useColi, linestyle="--")
-
-                    if self.ui.showSmoothedEIC_checkBox.isChecked():
-                        self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xic_smoothed[ps:pe],
-                                      fill=[int(cp.NPeakCenter - cp.NBorderLeft),
-                                            int(cp.NPeakCenter + cp.NBorderRight)], rearrange=len(selectedItems) == 1,
-                                      label=None, useCol=useColi, linestyle="--")
-
-                    self.drawPoints(self.ui.pl1, x=[times[a.scanIndex] for a in cp.assignedMZs], y=[xic[a.scanIndex] for a in cp.assignedMZs])
-
-                    if self.ui.showIsotopologues.isChecked():
-                        self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xicfirstiso[ps:pe],
-                                      fill=[int(cp.NPeakCenter - cp.NBorderLeft),
-                                            int(cp.NPeakCenter + cp.NBorderRight)], rearrange=len(selectedItems) == 1,
-                                      label=None, useCol=useColi)
-
-                    if self.ui.showArtificialShoft_checkBox.isChecked():
-                        pst=ps
-                        pet=pe
-                        ps=ps+cp.artificialEICLShift
-                        pe=pe+cp.artificialEICLShift
-
-                        if pe>len(times):
-                            pe=pet
-                            pet=pet+cp.artificialEICLShift
-                        if ps<0:
-                            ps=pst
-                            pst=pst-cp.artificialEICLShift
-                    else:
-                        pst=ps
-                        pet=pe
-
-
-                    self.drawPlot(self.ui.pl1, plotIndex=0, x=times[pst:pet], y=xicL[ps:pe],
-                                  fill=[int(cp.LPeakCenter - cp.LBorderLeft),
-                                        int(cp.LPeakCenter + cp.LBorderRight)], rearrange=len(selectedItems) == 1,
-                                  label="M': %.4f (%s, %s)"%(cp.mz, cp.xCount, cp.ionMode), useCol=useColi)
-
-                    if self.ui.checkBox_showBaseline.isChecked():
-                        self.drawPlot(self.ui.pl1, plotIndex=0, x=times[pst:pet], y=xicL_baseline[ps:pe],
-                                      fill=[int(cp.LPeakCenter - cp.LBorderLeft),
-                                            int(cp.LPeakCenter + cp.LBorderRight)], rearrange=len(selectedItems) == 1,
-                                      label=None, useCol=useColi, linestyle="--")
-
-                    if self.ui.showSmoothedEIC_checkBox.isChecked():
-                        self.drawPlot(self.ui.pl1, plotIndex=0, x=times[pst:pet], y=xicL_smoothed[ps:pe],
-                                      fill=[int(cp.LPeakCenter - cp.LBorderLeft),
-                                            int(cp.LPeakCenter + cp.LBorderRight)], rearrange=len(selectedItems) == 1,
-                                      label=None, useCol=useColi, linestyle="--")
-
-                    if self.ui.showIsotopologues.isChecked():
-                        self.drawPlot(self.ui.pl1, plotIndex=0, x=times[pst:pet], y=xicLfirstiso[ps:pe],
-                                      fill=[int(cp.LPeakCenter - cp.LBorderLeft),
-                                            int(cp.LPeakCenter + cp.LBorderRight)], rearrange=len(selectedItems) == 1,
-                                      label=None, useCol=useColi)
-
-                    maxindex, maxvalue = max(
-                        enumerate(xic[int(cp.NPeakCenter - 1):int(cp.NPeakCenter + 1)], start=int(cp.NPeakCenter - 1)),
-                        key=itemgetter(1))
-                    if self.ui.plotAddLabels.checkState() == QtCore.Qt.Checked:
-                        self.addAnnotation(self.ui.pl1, "%.5f\n%.2f min" % (cp.mz, cp.NPeakCenterMin / 60.),
-                                           (times[maxindex], xic[maxindex]), (times[maxindex], xic[maxindex]), 0,
-                                           fcColor=predefinedColors[useColi % len(predefinedColors)],
-                                           ecColor=predefinedColors[useColi % len(predefinedColors)],
-                                           arrowColor=predefinedColors[useColi % len(predefinedColors)], alpha=0.25)
-
-
-
-                    if self.ui.showDiagnostics.isChecked():
-                        for pa in allPeaks["peaksN"]:
-                            if pa.peakIndex!=cp.NPeakCenter:
-                                self.addAnnotation(self.ui.pl1, "" ,
-                                                   (times[pa.peakIndex], xic[pa.peakIndex]), (times[pa.peakIndex], xic[pa.peakIndex]), 0,
-                                                   fcColor="slategrey",
-                                                   ecColor="slategrey",
-                                                   arrowColor="slategrey", alpha=0.15, add=30)
-                        for pa in allPeaks["peaksL"]:
-                            self.addAnnotation(self.ui.pl1, "" ,
-                                               (times[pa.peakIndex], xicL[pa.peakIndex]), (times[pa.peakIndex], xicL[pa.peakIndex]), 0,
-                                               fcColor="slategrey",
-                                               ecColor="slategrey",
-                                               arrowColor="slategrey", alpha=0.15, up=False, add=30)
-
-
-
-                        for row in self.currentOpenResultsFile.curs.execute(
-                                    "SELECT c.id, c.eicID, c.NPeakCenterMin, c.NPeakCenter, c.mz, c.xcount, c.loading, (SELECT fg.featureName "
-                                    "FROM FeatureGroupFeatures fgf INNER JOIN FeatureGroups fg ON fgf.fGroupID=fg.id WHERE fgf.fID=c.id) AS FGroupID FROM chromPeaks c WHERE %f<=c.mz AND c.mz<=%f AND c.loading==%d and c.xcount=='%s'" % (cp.mz*(1-15/1000000.), cp.mz*(1+15/1000000.), cp.loading, cp.xCount)):
-
-                            if cp.NPeakCenter!=row[3]:
-                                self.addAnnotation(self.ui.pl1, "%s\n%.5f\n%.2f min"%(str(row[7]), row[4], row[2]/60.) ,
-                                                   (times[row[3]], xic[row[3]]), (times[row[3]], xic[row[3]]), 0,
-                                                   fcColor="slategrey",
-                                                   ecColor="slategrey",
-                                                   arrowColor="slategrey", alpha=0.15)
-
-
-                    isMetabolisationExperiment = self.isTracerMetabolisationExperiment()
-                    mzD, purN, purL = self.getLabellingParametersForResult(cp.id)
-
-                    toDrawMzs = []
-                    toDrawInts = []
-                    for row in self.currentOpenResultsFile.curs.execute("SELECT mzs, intensities, ionmode FROM massspectrum WHERE mID=%d"%cp.massSpectrumID):
-
-                        mzs = [float(t) for t in row[0].split(";")]
-                        intensities = [float(t) for t in row[1].split(";")]
-
-                        for mz in mzs:
-                            toDrawMzs.append(mz)
-                            toDrawMzs.append(mz)
-                            toDrawMzs.append(mz)
-
-                        for intensity in intensities:
-                            toDrawInts.append(0)
-                            if cp.ionMode == "-" and featuresPosSelected:
-                                toDrawInts.append(-intensity)
-                            else:
-                                toDrawInts.append(intensity)
-                            toDrawInts.append(0)
-
-                    self.drawPlot(self.ui.pl3, plotIndex=0, x=toDrawMzs, y=toDrawInts, useCol="lightgrey", multipleLocator=None,  alpha=0.1, title="", xlab="MZ")
-
-                useColi += 1
-            #</editor-fold>
-
-            #<editor-fold desc="#featureGroup results">
-            elif item.myType == "featureGroup" or item.myType == "Feature Groups":
-                self.ui.res_ExtractedData.setHeaderLabels(
-                    QtCore.QStringList(["Feature group / MZ (/Ionmode Z)", "Rt min", "Xn", "Adducts / in-source fragments / hetero atoms", "Scale M / M'", "Peak cor", "M:M' peaks ratio / area ratio", "Area M / M'", "Scans", "Tracer"]))
-
-
-                item.setBackgroundColor(0, QColor(predefinedColors[(useColi) % len(predefinedColors)]))
-                item.setBackgroundColor(1, QColor(predefinedColors[(useColi) % len(predefinedColors)]))
-                item.setBackgroundColor(2, QColor(predefinedColors[(useColi) % len(predefinedColors)]))
-                item.setBackgroundColor(3, QColor(predefinedColors[(useColi) % len(predefinedColors)]))
-                item.setBackgroundColor(4, QColor(predefinedColors[(useColi) % len(predefinedColors)]))
-                item.setBackgroundColor(5, QColor(predefinedColors[(useColi) % len(predefinedColors)]))
-                item.setBackgroundColor(6, QColor(predefinedColors[(useColi) % len(predefinedColors)]))
-                item.setBackgroundColor(7, QColor(predefinedColors[(useColi) % len(predefinedColors)]))
-
-                if item.myType == "Feature Groups":
-                    plotTypes.add("Feature Groups")
-                    for i in range(item.childCount()):
-                        child = item.child(i)
-                        mzs = [];
-                        rts = []
-                        for j in range(child.childCount()):
-                            feature = child.child(j)
-                            assert feature.myType == "feature"
-
-                            mzs.append(feature.myData.mz);
-                            rts.append(feature.myData.NPeakCenterMin / 60.)
-                        self.drawPlot(self.ui.pl1, plotIndex=0, x=rts, y=mzs, ylab="m/z", useCol=i, scatter=True,plot=True)
-
-                if item.myType == "featureGroup":
-                    selFeatureGroups.append(item)
-                    self.ui.chromPeakName.setText(item.myData.featureName)
-                    plotTypes.add("feature")
-                    meanRT = 0
-                    countK = 0
-
-                    self.clearPlot(self.ui.pl3)
-
-                    toDrawIntsPos = []
-                    toDrawIntsNeg = []
-                    toDrawMZsPos = []
-                    toDrawMZsNeg = []
-                    hasPos = False
-                    hasNeg = False
-                    massSpectraAvailable = False
-
-
-                    msi = 0
-                    mzs = {}
-                    intensities = {}
-                    mstime = {}
-
-                    try:
-                        for msspectrum in SQLSelectAsObject(self.currentOpenResultsFile.curs, "SELECT mzs, intensities, time AS tim, ionMode FROM massspectrum WHERE fgID=%d" % item.myID):
-                            msi += 1
-                            ionMode = str(msspectrum.ionMode)
-                            mzs[ionMode] = [float(u) for u in str(msspectrum.mzs).split(";")]
-                            intensities[ionMode] = [float(u) for u in str(msspectrum.intensities).split(";")]
-                            mstime[ionMode] = float(msspectrum.tim)
-                    except:
-                        pass
-
-
-                    hasPos = "+" in mzs.keys()
-                    hasNeg = "-" in mzs.keys()
-
-                    massSpectraAvailable = hasPos or hasNeg
-
-                    if hasPos:
-                        for mz in mzs["+"]:
-                            toDrawMZsPos.append(mz)
-                            toDrawMZsPos.append(mz)
-                            toDrawMZsPos.append(mz)
-                        for intensity in intensities["+"]:
-                            toDrawIntsPos.append(0)
-                            toDrawIntsPos.append(intensity)
-                            toDrawIntsPos.append(0)
-
-                        self.drawPlot(self.ui.pl3, plotIndex=0, x=toDrawMZsPos, y=toDrawIntsPos, useCol="lightgrey",
-                                      multipleLocator=None, alpha=0.1, title="", xlab="MZ")
-
-                    if hasNeg:
-                        negInt = 1.
-
-                        if "+" in mzs.keys():
-                            negInt = -1.
-
-                        for mz in mzs["-"]:
-                            toDrawMZsNeg.append(mz)
-                            toDrawMZsNeg.append(mz)
-                            toDrawMZsNeg.append(mz)
-                        for intensity in intensities["-"]:
-                            toDrawIntsNeg.append(0)
-                            toDrawIntsNeg.append(intensity * negInt)
-                            toDrawIntsNeg.append(0)
-
-                        self.drawPlot(self.ui.pl3, plotIndex=0, x=toDrawMZsNeg, y=toDrawIntsNeg, useCol="lightgrey",
-                                      multipleLocator=None, alpha=0.1, title="", xlab="MZ")
-                    mzs=[]
-                    childIDs = []
-                    maxInt = 0
-
-                    for childi in range(item.childCount()):
-                        if not (item.child(childi).isHidden()):
-                            cp = item.child(childi).myData
-
-                            if cp.ionMode == "-":
-                                mInt = max(toDrawIntsNeg)
-                                toDrawInts = toDrawIntsNeg
-                                toDrawMzs = toDrawMZsNeg
-                            else:
-                                mInt = max(toDrawIntsPos)
-                                toDrawInts = toDrawIntsPos
-                                toDrawMzs = toDrawMZsPos
-
-                            if massSpectraAvailable:
-
-                                isMetabolisationExperiment = self.isTracerMetabolisationExperiment()
-                                mzD, purN, purL = self.getLabellingParametersForResult(cp.id)
-
-                                bm = min(range(len(toDrawMzs)), key=lambda i: abs(toDrawMzs[i] - cp.mz)) + 1
-                                bml = min(range(len(toDrawMzs)),
-                                          key=lambda i: abs(toDrawMzs[i] - (cp.mz + mzD * cp.xCount / cp.loading))) + 1
-
-                                intLeft = toDrawInts[bm]
-                                intRight = toDrawInts[bml]
-
-                                h = 0
-                                if cp.ionMode == "-" and hasPos:
-                                    h = min(intLeft, intRight)
-                                else:
-                                    h = max(intLeft, intRight)
-                                    
-                                if self.ui.MSLabels.checkState() == QtCore.Qt.Checked:
-                                    self.addAnnotation(self.ui.pl3,
-                                                       "mz: %.5f\nl-mz: %.5f\nd-mz: %.5f\nXn: %d Z: %s%d" % (
-                                                           cp.mz, cp.lmz, mzD * cp.xCount,
-                                                           cp.xCount, cp.ionMode,
-                                                           cp.loading),
-                                                       (cp.mz + mzD * cp.xCount / cp.loading / 2., h * 1.1), (10, 120),
-                                                       rotation=0,
-                                                       up=not(cp.ionMode == "-" and hasPos))
-
-                                self.addArrow(self.ui.pl3, (cp.mz, toDrawInts[bm]), (cp.mz, h * 1.1),
-                                              drawArrowHead=True)
-                                self.addArrow(self.ui.pl3, (cp.mz, h * 1.1),
-                                              (cp.mz + mzD * cp.xCount / cp.loading, h * 1.1), ecColor="slategrey")
-                                self.addArrow(self.ui.pl3, (cp.mz + mzD * cp.xCount / cp.loading, toDrawInts[bml]),
-                                              (cp.mz + mzD * cp.xCount / cp.loading, h * 1.1), drawArrowHead=True)
-
-                                annotationHeight = h
-
-                                if self.ui.MSIsos.checkState() == QtCore.Qt.Checked:
-                                    bml = min(range(len(toDrawMzs)),
-                                              key=lambda w: abs(toDrawMzs[w] - (cp.mz + 1.00335 / cp.loading))) + 1
-
-                                    if cp.ionMode == "-" and hasPos:
-                                        h = min(toDrawInts[bm], toDrawInts[bml])
-                                    else:
-                                        h = max(toDrawInts[bm], toDrawInts[bml])
-
-
-                                    bm = min(range(len(toDrawMzs)),
-                                             key=lambda w: abs(
-                                                 toDrawMzs[w] - (cp.mz + 1.00335 * (cp.xCount - 1) / cp.loading))) + 1
-                                    bml = min(range(len(toDrawMzs)),
-                                              key=lambda w: abs(
-                                                  toDrawMzs[w] - (cp.mz + 1.00335 * cp.xCount / cp.loading))) + 1
-
-                                    if cp.ionMode == "-" and hasPos:
-                                        h = min(toDrawInts[bm], toDrawInts[bml])
-                                    else:
-                                        h = max(toDrawInts[bm], toDrawInts[bml])
-
-                                    intErrN, intErrL = self.getAllowedIsotopeRatioErrorsForResult()
-                                    self.ui.pl3.twinxs[0].add_patch(patches.Rectangle((cp.mz * (1. - annotationPPM / 1000000.),intLeft * 0),cp.mz * (2 * annotationPPM / 1000000.),0.01 * intLeft, edgecolor='none', facecolor='purple', alpha=0.2))
-                                    self.ui.pl3.twinxs[0].add_patch(patches.Rectangle(((cp.mz + (1.00335 * cp.xCount) / cp.loading) * (1. - annotationPPM / 1000000.),intLeft * 0), (cp.mz + (1.00335 * cp.xCount) / cp.loading) * (2 * annotationPPM / 1000000.), 0.01 * intLeft, edgecolor='none', facecolor='purple', alpha=0.2))
-
-                                    for iso in [1, 2, 3]:
-                                        self.ui.pl3.twinxs[0].add_patch(patches.Rectangle(((cp.mz + (1.00335 * iso) / cp.loading) * (1. - annotationPPM / 1000000.),intLeft * 0),(cp.mz + (1.00335 * iso) / cp.loading) * (2 * annotationPPM / 1000000.),0.01 * intLeft, edgecolor='none', facecolor='purple', alpha=0.2) )
-                                        self.ui.pl3.twinxs[0].add_patch(patches.Rectangle(((cp.mz + (1.00335 * (cp.xCount - iso)) / cp.loading) * (1. - annotationPPM / 1000000.),intLeft * 0),(cp.mz + (1.00335 * (cp.xCount - iso)) / cp.loading) * (2 * annotationPPM / 1000000.), 0.01 * intLeft,edgecolor='none', facecolor='purple', alpha=0.2) )
-                                        self.ui.pl3.twinxs[0].add_patch(patches.Rectangle(((cp.mz + (1.00335 * (cp.xCount + iso)) / cp.loading) * (1. - annotationPPM / 1000000.),intLeft * 0),(cp.mz + (1.00335 * (cp.xCount + iso)) / cp.loading) * (2 * annotationPPM / 1000000.), 0.01 * intLeft, edgecolor='none', facecolor='purple', alpha=0.2 ))
-
-                                        ratioN = getNormRatio(purN, cp.xCount, iso)
-                                        ratioL = getNormRatio(purL, cp.xCount, iso)
-                                        self.addArrow(self.ui.pl3, (
-                                            cp.mz + (1.00335 * iso) / cp.loading,
-                                            intLeft * max(0, (ratioN - intErrN) - .005)),
-                                                      (cp.mz + (1.00335 * iso) / cp.loading,
-                                                       intLeft * max(0, (ratioN - intErrN) + .005)), linewidth=5,
-                                                      alpha=2,
-                                                      ecColor="DarkSeaGreen")
-                                        self.addArrow(self.ui.pl3, (
-                                            cp.mz + (1.00335 * iso) / cp.loading,
-                                            intLeft * max(0, (ratioN + intErrN) - .005)),
-                                                      (cp.mz + (1.00335 * iso) / cp.loading,
-                                                       intLeft * (ratioN + intErrN) + .005), linewidth=5, alpha=2,
-                                                      ecColor="DarkSeaGreen")
-                                        self.addArrow(self.ui.pl3, (
-                                            cp.mz + (1.00335 * iso) / cp.loading, intLeft * max(0, (ratioN - .005))), (
-                                                          cp.mz + (1.00335 * iso) / cp.loading,
-                                                          intLeft * max(0, (ratioN + .005))), linewidth=5, alpha=.02,
-                                                      ecColor="Orange")
-
-                                        self.addArrow(self.ui.pl3, (cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
-                                                                    intRight * max(0,
-                                                                                   max(0, (ratioL - intErrL) - .005))),
-                                                      (
-                                                          cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
-                                                          intRight * max(0, (ratioL - intErrL) + .005)), linewidth=5,
-                                                      alpha=.02,
-                                                      ecColor="DarkSeaGreen")
-                                        self.addArrow(self.ui.pl3, (cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
-                                                                    intRight * max(0, (ratioL + intErrL) - .005)), (
-                                                          cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
-                                                          intRight * (ratioL + intErrL) + .005), linewidth=5, alpha=.02,
-                                                      ecColor="DarkSeaGreen")
-                                        self.addArrow(self.ui.pl3, (cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
-                                                                    intRight * max(0, (ratioL - .005))), (
-                                                          cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
-                                                          intRight * max(0, (ratioL + .005))), linewidth=5,
-                                                      alpha=.1, ecColor="Orange")
-
-                                    if self.ui.drawFPIsotopologues.checkState() == QtCore.Qt.Checked:
-                                        for iso in [1, 2, 3]:
-                                            self.addArrow(self.ui.pl3, (cp.mz - (1.00335 * iso) / cp.loading, 0),
-                                                          (cp.mz - (1.00335 * iso) / cp.loading, intLeft * .1),
-                                                          linewidth=5,
-                                                          ecColor="yellow")
-                                            self.addArrow(self.ui.pl3,
-                                                          (cp.mz + 1.00335 * (cp.xCount + iso) / cp.loading, 0),
-                                                          (cp.mz + 1.00335 * (cp.xCount + iso) / cp.loading,
-                                                           intRight * .1),
-                                                          linewidth=5, ecColor="yellow")
-
-                                        self.addArrow(self.ui.pl3, (cp.mz - 1.00335 / (cp.loading * 2), 0),
-                                                      (cp.mz - 1.00335 / (cp.loading * 2), intLeft * .05), linewidth=5,
-                                                      ecColor="yellow")
-                                        self.addArrow(self.ui.pl3, (cp.mz + 1.00335 / (cp.loading * 2), 0),
-                                                      (cp.mz + 1.00335 / (cp.loading * 2), intLeft * .05), linewidth=5,
-                                                      ecColor="yellow")
-                                        self.addArrow(self.ui.pl3, (
-                                            cp.mz + 1.00335 * cp.xCount / cp.loading + 1.00335 / (cp.loading * 2), 0), (
-                                                          cp.mz + 1.00335 * cp.xCount / cp.loading + 1.00335 / (
-                                                              cp.loading * 2),
-                                                          intRight * .05), linewidth=5, ecColor="yellow")
-                                        self.addArrow(self.ui.pl3, (
-                                            cp.mz + 1.00335 * cp.xCount / cp.loading - 1.00335 / (cp.loading * 2), 0), (
-                                                          cp.mz + 1.00335 * cp.xCount / cp.loading - 1.00335 / (
-                                                              cp.loading * 2),
-                                                          intRight * .05), linewidth=5, ecColor="yellow")
-
-
-                                for i, mz in enumerate(toDrawMzs):
-                                    for inc in range(0, cp.xCount+1):
-                                        if abs(mz - (cp.mz + mzD * inc / cp.loading)) * 1000000. / (
-                                                    cp.mz + mzD * inc / cp.loading) <= annotationPPM or abs(mz - (
-                                                    cp.mz + mzD * (cp.xCount - inc) / cp.loading)) * 1000000. / (
-                                                    cp.mz + mzD * (cp.xCount - inc) / cp.loading) <= annotationPPM or abs(
-                                                    mz - (
-                                                        cp.mz + mzD * (
-                                                        cp.xCount + inc) / cp.loading)) * 1000000. / (
-                                                    cp.mz + mzD * (cp.xCount + inc) / cp.loading) <= annotationPPM:
-                                            ttoDrawMzs = []
-                                            ttoDrawInts = []
-
-                                            ttoDrawMzs.append(toDrawMzs[i])
-                                            ttoDrawMzs.append(toDrawMzs[i])
-                                            ttoDrawMzs.append(toDrawMzs[i])
-
-                                            ttoDrawInts.append(0)
-                                            ttoDrawInts.append(toDrawInts[i])
-                                            ttoDrawInts.append(0)
-
-                                            minMZ = min(minMZ, toDrawMzs[i])
-                                            maxMZ = max(maxMZ, toDrawMzs[i])
-                                            minMZH = min(minMZH, toDrawInts[i])
-                                            maxMZH = max(maxMZH, toDrawInts[i])
-
-                                            self.drawPlot(self.ui.pl3, plotIndex=0, x=ttoDrawMzs, y=ttoDrawInts,
-                                                          useCol="black", multipleLocator=None, alpha=0.1, title="",
-                                                          xlab="MZ")
-
-
-                    for childi in range(item.childCount()):
-                        if not (item.child(childi).isHidden()):
-
-                            child = item.child(childi).myData
-
-
-                            childIDs.append(child.id)
-
-                            mzs.append(child.mz)
-                            peaks.append(child.NPeakCenterMin / 60.)
-
-                            xic = []
-                            xicL = []
-                            times = []
-
-                            invert=1
-                            if self.ui.negEIC.isChecked():
-                                invert=-1
-
-                            for row in self.currentOpenResultsFile.curs.execute("SELECT xic, xicL, xicfirstiso, xicLfirstiso, xicLfirstisoconjugate, xic_smoothed, xicL_smoothed, times, xic_baseline, xicL_baseline FROM XICs WHERE id==%d" % child.eicID):
-                                xic                   = [float(t) for t in row[0].split(";")]
-                                xicL                  = [float(t) for t in row[1].split(";")]
-                                xicfirstiso           = [float(t) for t in row[2].split(";")]
-                                xicLfirstiso          = [float(t) for t in row[3].split(";")]
-                                xicLfirstisoconjugate = [float(t) for t in row[4].split(";")]
-                                xic_smoothed          = [float(t) for t in row[5].split(";")]
-                                xicL_smoothed         = [float(t) for t in row[6].split(";")]
-                                times                 = [float(t) / 60. for t in row[7].split(";")]
-                                xic_baseline          = [float(t) for t in row[8].split(";")]
-                                xicL_baseline         = [float(t) for t in row[9].split(";")]
-
-                            minTime = min(minTime, min(times[int(child.NPeakCenter - child.NPeakScale * 1):int(
-                                child.NPeakCenter + child.NPeakScale * 1)]))
-                            maxTime = max(maxTime, max(times[int(child.NPeakCenter - child.NPeakScale * 1):int(
-                                child.NPeakCenter + child.NPeakScale * 1)]))
-
-                            if self.ui.scaleFeatures.isChecked():
-                                s = int(child.NPeakCenter - child.NBorderLeft * 1)
-                                e = int(child.NPeakCenter + child.NBorderRight * 1)
-                                maxP = s + max(range(e - s), key=lambda x: xic[s + x])
-                                maxE  = mean(xic[(maxP - 3):(maxP + 3)])
-                                maxEL = mean(xicL[(maxP - 3):(maxP + 3)])
-
-                                if maxE == 0:
-                                    maxE=1
-                                if maxEL == 0:
-                                    maxEL=1
-                                if not self.ui.scaleLabelledFeatures.isChecked():
-                                    maxEL=maxE
-
-                                xic = [u / maxE for u in xic]
-                                xic_smoothed = [u / maxE for u in xic_smoothed]
-                                xicfirstiso = [u / maxE for u in xicfirstiso]
-                                xic_baseline = [u / maxE for u in xic_baseline]
-
-                                xicL = [u / maxEL for u in xicL]
-                                xicL_smoothed = [u / maxEL for u in xicL_smoothed]
-                                xicLfirstiso = [u / maxEL for u in xicLfirstiso]
-                                xicLfirstisoconjugate = [u / maxEL for u in xicLfirstisoconjugate]
-                                xicL_baseline = [u / maxEL for u in xicL_baseline]
-
-                            xicL = [invert*u for u in xicL]
-                            xicL_smoothed = [invert*u for u in xicL_smoothed]
-                            xicLfirstiso = [invert*u for u in xicLfirstiso]
-                            xicLfirstisoconjugate = [invert*u for u in xicLfirstisoconjugate]
-
-                            if self.ui.flattenXIC.isChecked():
-                                ps = min(int(child.NPeakCenter - child.NPeakScale * 2), int(child.LPeakCenter - child.LPeakScale * 2))
-                                pe = max(int(child.NPeakCenter + child.NPeakScale * 2), int(child.LPeakCenter + child.LPeakScale * 2))
-                            else:
-                                ps=0
-                                pe=len(times)
-                                #times=times[ps:pe]
-                                #xic=xic[ps:pe]
-                                #xic_smoothed=xic_smoothed[ps:pe]
-                                #xicfirstiso=xicfirstiso[ps:pe]
-                                #xicL=xicL[ps:pe]
-                                #xicL_smoothed=xicL_smoothed[ps:pe]
-                                #xicLfirstiso=xicLfirstiso[ps:pe]
-                                #xicLfirstisoconjugate=xicLfirstisoconjugate[ps:pe]
-
-                            maxInt = max(maxInt, max(xic[int(child.NPeakCenter - child.NPeakScale * 1): int(
-                                child.NPeakCenter + child.NPeakScale * 1)]))
-
-                            maxIntY = max(maxIntY, max(xic[int(child.NPeakCenter - child.NPeakScale * 1): int(
-                                child.NPeakCenter + child.NPeakScale * 1)]))
-                            minIntY = min(minIntY, min(xicL[int(child.LPeakCenter - child.LPeakScale * 1): int(
-                                child.LPeakCenter + child.LPeakScale * 1)]))
-
-                            self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xic[ps:pe], fill=[
-                                max(int(child.LPeakCenter - child.LBorderLeft),
-                                    int(child.NPeakCenter - child.NBorderLeft)),
-                                min(int(child.NPeakCenter + child.NBorderRight),
-                                    int(child.LPeakCenter + child.LBorderRight))], rearrange=len(selectedItems) == 1,
-                                          label="M: %.4f (%d, %s)"%(child.mz, child.xCount, child.ionMode), useCol=useColi)  #useCol=selIndex*2)
-
-                            if self.ui.checkBox_showBaseline.isChecked():
-                                self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xic_baseline[ps:pe], fill=[
-                                    max(int(child.LPeakCenter - child.LBorderLeft),
-                                        int(child.NPeakCenter - child.NBorderLeft)),
-                                    min(int(child.NPeakCenter + child.NBorderRight),
-                                        int(child.LPeakCenter + child.LBorderRight))], rearrange=len(selectedItems) == 1,
-                                              label="", useCol=useColi, linestyle="--")
-                                self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xicL_baseline[ps:pe], fill=[
-                                    max(int(child.LPeakCenter - child.LBorderLeft),
-                                        int(child.NPeakCenter - child.NBorderLeft)),
-                                    min(int(child.NPeakCenter + child.NBorderRight),
-                                        int(child.LPeakCenter + child.LBorderRight))], rearrange=len(selectedItems) == 1,
-                                              label="", useCol=useColi, linestyle="--")
-
-
-                            if self.ui.showSmoothedEIC_checkBox.isChecked():
-                                self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xic_smoothed[ps:pe], fill=[
-                                    max(int(child.LPeakCenter - child.LBorderLeft),
-                                        int(child.NPeakCenter - child.NBorderLeft)),
-                                    min(int(child.NPeakCenter + child.NBorderRight),
-                                        int(child.LPeakCenter + child.LBorderRight))], rearrange=len(selectedItems) == 1,
-                                              label="", useCol=useColi, linestyle="--")
-
-                            if self.ui.showIsotopologues.isChecked():
-                                self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xicfirstiso[ps:pe], fill=[
-                                    max(int(child.LPeakCenter - child.LBorderLeft),
-                                        int(child.NPeakCenter - child.NBorderLeft)),
-                                    min(int(child.NPeakCenter + child.NBorderRight),
-                                        int(child.LPeakCenter + child.LBorderRight))],
-                                              rearrange=len(selectedItems) == 1, label=None, useCol=useColi)
-
-                            self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xicL[ps:pe], fill=[
-                                max(int(child.LPeakCenter - child.LBorderLeft),
-                                    int(child.NPeakCenter - child.NBorderLeft)),
-                                min(int(child.NPeakCenter + child.NBorderRight),
-                                    int(child.LPeakCenter + child.LBorderRight))], rearrange=len(selectedItems) == 1,
-                                          label="M': %.4f (%d, %s)"%(child.mz, child.xCount, child.ionMode), useCol=useColi)
-
-                            if self.ui.showSmoothedEIC_checkBox.isChecked():
-                                self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xicL_smoothed[ps:pe], fill=[
-                                    max(int(child.LPeakCenter - child.LBorderLeft),
-                                        int(child.NPeakCenter - child.NBorderLeft)),
-                                    min(int(child.NPeakCenter + child.NBorderRight),
-                                        int(child.LPeakCenter + child.LBorderRight))], rearrange=len(selectedItems) == 1,
-                                              label=None, useCol=useColi, linestyle="--")
-
-
-                            if self.ui.showIsotopologues.isChecked():
-                                self.drawPlot(self.ui.pl1, plotIndex=0, x=times[ps:pe], y=xicLfirstiso[ps:pe], fill=[
-                                    max(int(child.LPeakCenter - child.LBorderLeft),
-                                        int(child.NPeakCenter - child.NBorderLeft)),
-                                    min(int(child.NPeakCenter + child.NBorderRight),
-                                        int(child.LPeakCenter + child.LBorderRight))],
-                                              rearrange=len(selectedItems) == 1,
-                                              label=None, useCol=useColi)
-
-                            maxindex, maxvalue = max(
-                                enumerate(xic[int(child.NPeakCenter - 1):int(child.NPeakCenter + 1)],
-                                          start=int(child.NPeakCenter - 1)), key=itemgetter(1))
-                            meanRT += child.NPeakCenterMin / 60.
-                            countK += 1
-
-                    meanRT /= countK
-
-                    if self.ui.plotAddLabels.checkState() == QtCore.Qt.Checked:
-                        self.addAnnotation(self.ui.pl1, "%s\n@ %.2f" % (item.myData.featureName, meanRT), (meanRT, maxInt),
-                                           (times[maxindex], xic[maxindex]), 0)
-                useColi += 1
-
-            if len(selFeatureGroups)>=1:
-                childIDs=[]
-                for selFeatureGroup in selFeatureGroups:
-                    for childi in range(selFeatureGroup.childCount()):
-                        child = selFeatureGroup.child(childi).myData
-                        childIDs.append(child.id)
-                if len(childIDs)>=1:
-                    try:
-                        self.clearPlot(self.ui.pl2A)
-                        self.clearPlot(self.ui.pl2B)
-                        plt.cla()
-                        self.ui.pl2A.fig.subplots_adjust(left=0.15, bottom=0.05, right=0.99, top=0.85)
-                        self.ui.pl2B.fig.subplots_adjust(left=0.15, bottom=0.05, right=0.99, top=0.85)
-
-                        fRows = 0
-                        minCorr = 1
-                        for row in self.currentOpenResultsFile.curs.execute("SELECT key, value FROM config WHERE key='minCorrelation'"):
-                            fRows += 1
-                            minCorr = float(row[1])
-                        assert 0 < fRows <= 1, "Min Correlation not found or found multiple times in settings"
-
-                        dataCorr = []
-                        dataSILRatios = []
-                        featureIDToColsNum = {}
-                        texts = []
-                        for i in range(len(childIDs)):
-                            arow = []
-                            brow = []
-                            for j in range(len(childIDs)):
-                                arow.append(0)
-                                brow.append(0)
-                            dataCorr.append(arow)
-                            dataSILRatios.append(brow)
-                            texts.append("")
-                            featureIDToColsNum[childIDs[i]] = i
-
-                        cIds = ",".join(["%d" % f for f in childIDs])
-
-                        for row in self.currentOpenResultsFile.curs.execute(
-                                        "SELECT c.id, c.mz, c.xcount, c.ionMode FROM chromPeaks c WHERE c.id IN (%s)" % (cIds)):
-                            id, mz, xcount, ionMode=row
-
-                            fI1 = featureIDToColsNum[id]
-                            texts[fI1]="%s%.4f/%d"%(ionMode, mz, xcount)
-
-                        minCorrCurrent=1
-                        maxSilRatioCurrent=0
-                        for row in self.currentOpenResultsFile.curs.execute(
-                                        "SELECT ff.fID1, ff.fID2, ff.corr, ff.silRatioValue FROM featurefeatures ff WHERE ff.fID1 IN (%s) AND ff.fID2 IN (%s)" % (
-                                        cIds, cIds)):
-                            correlation = row[2]
-                            silRatioValue = row[3]
-
-                            minCorrCurrent=min(minCorrCurrent, correlation)
-                            maxSilRatioCurrent=max(maxSilRatioCurrent, silRatioValue-1)
-
-                            fI1 = featureIDToColsNum[row[0]]
-                            fI2 = featureIDToColsNum[row[1]]
-
-                            if fI1 > fI2:
-                                a = fI2
-                                fI2 = fI1
-                                fI1 = a
-
-                            dataCorr[fI1][fI2] = correlation
-                            dataCorr[fI2][fI1] = correlation
-
-                            dataSILRatios[fI1][fI2] = silRatioValue-1
-                            dataSILRatios[fI2][fI1] = silRatioValue-1
-
-                        dv=[]
-                        for i in range(len(dataCorr)):
-                            dataCorr[i][i] = 1
-                            dv.extend(dataCorr[i])
-
-                        hc=HCA_general.HCA_generic()
-                        tree=hc.generateTree(dataCorr)
-
-                        datOrd=range(len(dataCorr))
-
-                        datOrd=hc.getObjsOrderInTree(tree)
-                        dnew=[]
-                        dnew2=[]
-                        for i in datOrd:
-                            dnew.append([dataCorr[i][j] for j in datOrd])
-                            dnew2.append([dataSILRatios[i][j] for j in datOrd])
-                        dataCorr=dnew
-                        dataSILRatios=dnew2
-
-                        dataCorr[len(dataCorr) - 1][len(dataCorr) - 1] = 1
-
-                        colorDict = {'red': ((0.0, 0, convertXaToX(47 / 255., 0.2)),
-                                             (0.5, convertXaToX(47 / 255., 0.5), convertXaToX(178 / 255., 0.225)),
-                                             (minCorr + (1 - minCorr) / 2., convertXaToX(178 / 255., 0.525),convertXaToX(154 / 255., .5)),
-                                             (1.0, convertXaToX(154 / 255., .9), 0)),
-
-                                     'green': ((0.0, 0, convertXaToX(79 / 255., 0.2)),
-                                               (0.5, convertXaToX(79 / 255., 0.5), convertXaToX(34 / 255., 0.225)),
-                                               (minCorr + (1 - minCorr) / 2., convertXaToX(34 / 255., 0.525),convertXaToX(205 / 255., .5)),
-                                               (1.0, convertXaToX(205 / 255., .9), 0)),
-
-                                     'blue': ((0.0, 0, convertXaToX(79 / 255., 0.2)),
-                                              (0.5, convertXaToX(79 / 255., 0.5), convertXaToX(34 / 255., 0.225)),
-                                              (minCorr + (1 - minCorr) / 2., convertXaToX(34 / 255., 0.525),convertXaToX(50 / 255., .5)),
-                                              (1.0, convertXaToX(50 / 255., 0.9), .0))}
-
-                        plt.register_cmap(name='custom_colormap', data=colorDict)
-                        cax = self.ui.pl2A.twinxs[0].matshow(dataCorr, cmap=get_cmap("custom_colormap"))
-
-                        self.ui.pl2A.axes.set_xticks([i for i in range(len(dataCorr))])
-                        self.ui.pl2A.axes.set_xticklabels([texts[i] for i in datOrd], rotation=90)
-                        self.ui.pl2A.axes.set_yticks([i for i in range(len(dataCorr))])
-                        self.ui.pl2A.axes.set_yticklabels([texts[i] for i in datOrd])
-
-                        self.ui.pl2A.axes.set_yticks([i - .5 for i in range(len(dataCorr) + 1)], minor=True)
-                        self.ui.pl2A.axes.set_xticks([i - .5 for i in range(len(dataCorr) + 1)], minor=True)
-
-                        self.ui.pl2A.axes.grid(ls='solid', which='minor', color='white', linewidth=2)
-
-                        cax.set_clim(-1, 1)
-                        cb = self.ui.pl2A.fig.colorbar(cax, ticks=[-1, 0, minCorr, minCorrCurrent])
-                        cb.outline.set_linewidth(0)
-
-                        colorDict = {'red': ((0.0, 0, convertXaToX(47 / 255., 0.2)),
-                                             (0.5, convertXaToX(47 / 255., 0.5), convertXaToX(154 / 255., .9)),
-                                             (0.6, convertXaToX(154 / 255., .5),convertXaToX(178 / 255., 0.225)),
-                                             (1.0, convertXaToX(178 / 255., 0.525), 0)),
-
-                                     'green': ((0.0, 0, convertXaToX(79 / 255., 0.2)),
-                                               (0.5, convertXaToX(79 / 255., 0.5), convertXaToX(34 / 255., 0.225)),
-                                               (0.6, convertXaToX(205 / 255., .5), convertXaToX(205 / 255., .9)),
-                                               (1.0, convertXaToX(34 / 255., 0.525), 0)),
-
-                                     'blue': ((0.0, 0, convertXaToX(79 / 255., 0.2)),
-                                              (0.5, convertXaToX(79 / 255., 0.5), convertXaToX(50 / 255., 0.9)),
-                                              (0.6, convertXaToX(50 / 255., .5),convertXaToX(34 / 255., 0.225)),
-                                              (1.0, convertXaToX(34 / 255., 0.525), .0))}
-
-                        plt.register_cmap(name='custom_colormap2', data=colorDict)
-                        cbx = self.ui.pl2B.twinxs[0].matshow(dataSILRatios, cmap=get_cmap("custom_colormap2"))
-                        self.ui.pl2B.axes.set_xticks([i for i in range(len(dataSILRatios))])
-                        self.ui.pl2B.axes.set_xticklabels([texts[i] for i in datOrd], rotation=90)
-                        self.ui.pl2B.axes.set_yticks([i for i in range(len(dataSILRatios))])
-                        self.ui.pl2B.axes.set_yticklabels([texts[i] for i in datOrd])
-
-                        self.ui.pl2B.axes.set_yticks([i - .5 for i in range(len(dataSILRatios) + 1)], minor=True)
-                        self.ui.pl2B.axes.set_xticks([i - .5 for i in range(len(dataSILRatios) + 1)], minor=True)
-
-                        self.ui.pl2B.axes.grid(ls='solid', which='minor', color='white', linewidth=2)
-
-                        cbx.set_clim(-1, 1)
-                        cb = self.ui.pl2B.fig.colorbar(cbx, ticks=[0, 0.1,0.2, maxSilRatioCurrent])
-                        cb.outline.set_linewidth(0)
-
-
-                        self.ui.pl2A.fig.canvas.draw()
-                        self.ui.pl2B.fig.canvas.draw()
-
-                    except Exception as ex:
-                        import traceback
-                        traceback.print_exc()
-                        logging.error(str(traceback))
-
-            #</editor-fold>
-
-        useColi=0
-        for selIndex, item in enumerate(selectedItems):
-            if not (hasattr(item, "myType")):
-                continue
-
-            #<editor-fold desc="#feature results">
-            if item.myType == "Features" or item.myType == "feature":
-                self.ui.chromPeakName.setText("")
-
-                self.ui.res_ExtractedData.setHeaderLabels(QtCore.QStringList(
-                    ["MZ (/Ionmode Z)", "Rt min", "Xn", "Adducts / in-source fragments / hetero atoms", "Scale M / M'", "Peak cor", "M:M' peaks ratio / area ratio", "Area M / M'", "Scans", "LMZ", "Tracer"]))
-
-                if item.myType == "feature":
-                    cp = item.myData
-                    plotTypes.add("feature")
-                    mzs.append(cp.mz)
-                    peaks.append(cp.NPeakCenterMin / 60.)
-                    xic = []
-                    xicL = []
-                    times = []
-                    maxE=1
-
-                    invert=1
-                    if self.ui.negEIC.isChecked():
-                        invert=-1
-
-
-                    isMetabolisationExperiment = self.isTracerMetabolisationExperiment()
-                    mzD, purN, purL = self.getLabellingParametersForResult(cp.id)
-
-                    toDrawMzs = []
-                    toDrawInts = []
-                    for row in self.currentOpenResultsFile.curs.execute("SELECT mzs, intensities, ionmode FROM massspectrum WHERE mID=%d"%cp.massSpectrumID):
-
-                        mzs = [float(t) for t in row[0].split(";")]
-                        intensities = [float(t) for t in row[1].split(";")]
-
-                        for mz in mzs:
-                            toDrawMzs.append(mz)
-                            toDrawMzs.append(mz)
-                            toDrawMzs.append(mz)
-
-                        for intensity in intensities:
-                            toDrawInts.append(0)
-                            if cp.ionMode == "-" and featuresPosSelected:
-                                toDrawInts.append(-intensity)
-                            else:
-                                toDrawInts.append(intensity)
-                            toDrawInts.append(0)
-
-                    #self.drawPlot(self.ui.pl3, plotIndex=0, x=toDrawMzs, y=toDrawInts, useCol="lightgrey", multipleLocator=None,  alpha=0.1, title="", xlab="MZ")
-
-                    bm = min(range(len(toDrawMzs)), key=lambda i: abs(toDrawMzs[i] - cp.mz)) + 1
-                    bml = min(range(len(toDrawMzs)),
-                              key=lambda i: abs(toDrawMzs[i] - (cp.lmz))) + 1
-
-                    intLeft = toDrawInts[bm]
-                    intRight = toDrawInts[bml]
-
-                    h = 0
-                    if cp.ionMode == "-" and featuresPosSelected:
-                        h = min(intLeft, intRight)
-                    else:
-                        h = max(intLeft, intRight)
-
-                    if self.ui.MSLabels.checkState() == QtCore.Qt.Checked:
-                        self.addAnnotation(self.ui.pl3, "mz: %.5f\nl-mz: %.5f\nd-mz: %.5f\nXn: %s Z: %s%d" % (
-                            cp.mz, cp.lmz, mzD, cp.xCount, cp.ionMode,
-                            cp.loading), (cp.mz + (cp.lmz-cp.mz)/ 2., h*1.1), (10, 120), rotation=0,
-                                           up=not (cp.ionMode == "-" and featuresPosSelected))
-
-                    self.addArrow(self.ui.pl3, (cp.mz, toDrawInts[bm]), (cp.mz, h*1.1), drawArrowHead=True)
-                    self.addArrow(self.ui.pl3, (cp.mz, h*1.1), (cp.lmz, h*1.1),ecColor="slategrey")
-                    self.addArrow(self.ui.pl3, (cp.lmz, toDrawInts[bml]),(cp.lmz, h*1.1), drawArrowHead=True)
-
-                    annotationHeight=h
-
-                    if self.ui.MSIsos.checkState() == QtCore.Qt.Checked:
-                        bml = min(range(len(toDrawMzs)),
-                                  key=lambda w: abs(toDrawMzs[w] - (cp.mz + 1.00335 / cp.loading))) + 1
-
-                        if cp.ionMode == "-" and featuresPosSelected:
-                            h = min(toDrawInts[bm], toDrawInts[bml])
-                        else:
-                            h = max(toDrawInts[bm], toDrawInts[bml])
-
-
-                        bm = min(range(len(toDrawMzs)),
-                                 key=lambda w: abs(toDrawMzs[w] - (cp.lmz - 1.00335  / cp.loading))) + 1
-                        bml = min(range(len(toDrawMzs)),
-                                  key=lambda w: abs(toDrawMzs[w] - (cp.lmz + 1.00335  / cp.loading))) + 1
-
-                        if cp.ionMode == "-" and featuresPosSelected:
-                            h = min(toDrawInts[bm], toDrawInts[bml])
-                        else:
-                            h = max(toDrawInts[bm], toDrawInts[bml])
-
-
-                        intErrN, intErrL = self.getAllowedIsotopeRatioErrorsForResult()
-
-                        self.ui.pl3.twinxs[0].add_patch(patches.Rectangle((cp.mz  * (1. - annotationPPM / 1000000.),intLeft * 0), cp.mz  * (2 * annotationPPM / 1000000.), 0.01 * intLeft, edgecolor='none', facecolor='purple', alpha=0.2))
-                        self.ui.pl3.twinxs[0].add_patch(patches.Rectangle(((cp.lmz + 1.00335  / cp.loading)  * (1. - annotationPPM / 1000000.),intLeft * 0), (cp.lmz + 1.00335 / cp.loading)  * (2 * annotationPPM / 1000000.), 0.01 * intLeft, edgecolor='none', facecolor='purple', alpha=0.2))
-
-                        for iso in [1, 2, 3]:
-                            self.ui.pl3.twinxs[0].add_patch(patches.Rectangle(((cp.mz+ (1.00335 * iso) / cp.loading) * (1. - annotationPPM / 1000000.),intLeft * 0), (cp.mz+ (1.00335 * iso) / cp.loading) * (2 * annotationPPM / 1000000.), 0.01 * intLeft, edgecolor='none', facecolor='purple', alpha=0.2))
-                            self.ui.pl3.twinxs[0].add_patch(patches.Rectangle(((cp.lmz- (1.00335 * iso) / cp.loading) * (1. - annotationPPM / 1000000.),intLeft * 0), (cp.lmz- (1.00335 * iso) / cp.loading) * (2 * annotationPPM / 1000000.), 0.01 * intLeft, edgecolor='none', facecolor='purple', alpha=0.2))
-                            self.ui.pl3.twinxs[0].add_patch(patches.Rectangle(((cp.lmz+ (1.00335 * iso) / cp.loading) * (1. - annotationPPM / 1000000.), intLeft * 0), (cp.lmz+ (1.00335 * iso) / cp.loading) * (2 * annotationPPM / 1000000.), 0.01 * intLeft, edgecolor='none', facecolor='purple', alpha=0.2))
-
-                            if not(isinstance(cp.xCount, basestring)):
-                                ratioN = getNormRatio(purN, cp.xCount, iso)
-                                ratioL = getNormRatio(purL, cp.xCount, iso)
-                                self.addArrow(self.ui.pl3, (
-                                    cp.mz + (1.00335 * iso) / cp.loading, intLeft * max(0, (ratioN - intErrN)-.005)),
-                                              (cp.mz + (1.00335 * iso) / cp.loading,
-                                              intLeft * max(0, (ratioN - intErrN)+.005)), linewidth=5, alpha=2,
-                                              ecColor="DarkSeaGreen")
-
-                                self.addArrow(self.ui.pl3, (
-                                    cp.mz + (1.00335 * iso) / cp.loading, intLeft * max(0, (ratioN + intErrN)-.005)),
-                                              (cp.mz + (1.00335 * iso) / cp.loading,
-                                              intLeft * (ratioN + intErrN)+.005), linewidth=5, alpha=2,
-                                              ecColor="DarkSeaGreen")
-                                self.addArrow(self.ui.pl3, (
-                                    cp.mz + (1.00335 * iso) / cp.loading, intLeft * max(0, (ratioN - .005))), (
-                                              cp.mz + (1.00335 * iso) / cp.loading,
-                                              intLeft * max(0, (ratioN + .005))), linewidth=5, alpha=.02,
-                                              ecColor="Orange")
-
-                                self.addArrow(self.ui.pl3, (cp.lmz - 1.00335 *  iso / cp.loading,
-                                                            intRight * max(0, max(0, (ratioL - intErrL)-.005))), (
-                                                  cp.lmz - 1.00335 * iso / cp.loading,
-                                                  intRight * max(0, (ratioL - intErrL)+.005)), linewidth=5, alpha=.02,
-                                              ecColor="DarkSeaGreen")
-                                self.addArrow(self.ui.pl3, (cp.lmz - 1.00335 * iso / cp.loading,
-                                                            intRight * max(0, (ratioL + intErrL)-.005)), (
-                                                  cp.lmz - 1.00335 * iso / cp.loading,
-                                                  intRight * (ratioL + intErrL)+.005), linewidth=5, alpha=.02,
-                                              ecColor="DarkSeaGreen")
-                                self.addArrow(self.ui.pl3, (cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
-                                                            intRight * max(0, (ratioL - .005))), (
-                                                  cp.mz + 1.00335 * (cp.xCount - iso) / cp.loading,
-                                                  intRight * max(0, (ratioL + .005))), linewidth=5,
-                                              alpha=.1, ecColor="Orange")
-
-                        if self.ui.drawFPIsotopologues.checkState() == QtCore.Qt.Checked:
-                            for iso in [1, 2, 3]:
-                                self.addArrow(self.ui.pl3, (cp.mz - (1.00335 * iso) / cp.loading, 0),
-                                              (cp.mz - (1.00335 * iso) / cp.loading, intLeft * .1), linewidth=5,
-                                              ecColor="yellow")
-                                self.addArrow(self.ui.pl3, (cp.lmz + 1.00335 * iso / cp.loading, 0),
-                                              (cp.lmz + 1.00335 * iso / cp.loading, intRight * .1),
-                                              linewidth=5, ecColor="yellow")
-
-                            self.addArrow(self.ui.pl3, (cp.mz - 1.00335 / (cp.loading * 2), 0),
-                                          (cp.mz - 1.00335 / (cp.loading * 2), intLeft * .05), linewidth=5,
-                                          ecColor="yellow")
-                            self.addArrow(self.ui.pl3, (cp.mz + 1.00335 / (cp.loading * 2), 0),
-                                          (cp.mz + 1.00335 / (cp.loading * 2), intLeft * .05), linewidth=5,
-                                          ecColor="yellow")
-                            self.addArrow(self.ui.pl3, (
-                                cp.lmz + 1.00335 / (cp.loading * 2), 0), (
-                                              cp.lmz + 1.00335 / (cp.loading * 2),
-                                              intRight * .05), linewidth=5, ecColor="yellow")
-                            self.addArrow(self.ui.pl3, (
-                                cp.lmz  - 1.00335 / (cp.loading * 2), 0), (
-                                              cp.lmz - 1.00335 / (cp.loading * 2),
-                                              intRight * .05), linewidth=5, ecColor="yellow")
-
-
-                    for row in self.currentOpenResultsFile.curs.execute("SELECT mzs, intensities, ionmode FROM massspectrum WHERE mID=%d"%cp.massSpectrumID):
-
-                        mzs = [float(t) for t in row[0].split(";")]
-                        intensities = [float(t) for t in row[1].split(";")]
-
-
-                        for i, mz in enumerate(mzs):
-                            for inc in range(0, int((cp.lmz-cp.mz)//1.00335484)*cp.loading):
-                                if abs(mz - (cp.mz + 1.00335484 * inc / cp.loading)) * 1000000. / (cp.mz + 1.00335484 * inc / cp.loading) <= annotationPPM \
-                                        or abs(mz - (cp.lmz + 1.00335484 * inc / cp.loading)) * 1000000. / (cp.lmz + 1.00335484 * inc / cp.loading) <= annotationPPM \
-                                        or abs(mz - (cp.lmz - 1.00335484 * inc / cp.loading)) * 1000000. / (cp.lmz - 1.00335484 * inc / cp.loading) <= annotationPPM:
-                                    toDrawMzs = []
-                                    toDrawInts = []
-
-                                    toDrawMzs.append(mzs[i])
-                                    toDrawMzs.append(mzs[i])
-                                    toDrawMzs.append(mzs[i])
-
-                                    toDrawInts.append(0)
-                                    if cp.ionMode == "-" and featuresPosSelected:
-                                        toDrawInts.append(-intensities[i])
-                                        minMZH = min(minMZH, -intensities[i])
-                                    else:
-                                        toDrawInts.append(intensities[i])
-                                        maxMZH = max(maxMZH, intensities[i])
-                                    toDrawInts.append(0)
-
-                                    minMZ = min(minMZ, mzs[i])
-                                    maxMZ = max(maxMZ, mzs[i])
-
-                                    self.drawPlot(self.ui.pl3, plotIndex=0, x=toDrawMzs, y=toDrawInts, useCol=predefinedColors[useColi % len(predefinedColors)], multipleLocator=None,  alpha=0.1, title="", xlab="MZ")
-                                    #self.drawPlot(self.ui.pl3, plotIndex=0, x=toDrawMzs, y=toDrawInts, useCol="black", multipleLocator=None,  alpha=0.1, title="", xlab="MZ")
-                useColi += 1
-            #</editor-fold>
-
-
-
-        #<editor-fold desc="#featureGroup results">
-
-        if len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - observed intensities":
-            intensities=[]
-            for row in self.currentOpenResultsFile.curs.execute("SELECT mz, intensity, lmz, tmz, xcount, loading FROM mzs"):
-                mz, intensity, lmz, tmz, xcount, loading=row
-                intensities.append(log10(intensity))
-            self.ui.pl1.twinxs[0].hist(intensities, 50, normed=False, facecolor='green', alpha=0.5)
-            self.ui.pl1.axes.set_title("Histogram of matched signal pairs - intensity of native signals")
-            self.ui.pl1.axes.set_xlabel("Log10(Signal intensity)")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - observed intensities comparison":
-            intensities=[]
-            intensitiesL=[]
-            text, ok = QtGui.QInputDialog.getText(self.parentWidget(), "Observed intensities comparions", "Please enter the expected ratio of native to labeled signal pair abundances (e.g. 1)")
-            expRatio=1
-            if ok:
-                expRatio=float(text)
-            for row in self.currentOpenResultsFile.curs.execute("SELECT mz, intensity, intensityL, lmz, tmz, xcount, loading FROM mzs"):
-                mz, intensity, intensityL, lmz, tmz, xcount, loading=row
-                intensities.append(log10(intensity))
-                intensitiesL.append(log10(intensityL))
-            minInt=min(min(intensities), min(intensitiesL))
-            maxInt=max(max(intensities), max(intensitiesL))
-
-            self.ui.pl1.twinxs[0].plot([log10(10**minInt), log10((10**maxInt)*2)], [log10((10**minInt)*(1/expRatio)), log10((10**maxInt)*2*(1/expRatio))])
-            self.ui.pl1.twinxs[0].plot(intensities, intensitiesL, 'ro')
-            self.ui.pl1.axes.set_title("Histogram of matched signal pairs - intensity of native and labeled signals")
-            self.ui.pl1.axes.set_xlabel("Log10(Native signal intensity)")
-            self.ui.pl1.axes.set_ylabel("Log10(Labeled signal intensity)")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - relative mz error":
-            mzdifferrors=[]
-            for row in self.currentOpenResultsFile.curs.execute("SELECT mz, lmz, tmz, xcount, loading FROM mzs"):
-                mz, lmz, tmz, xcount, loading=row
-                mzdifferrors.append((lmz-mz-tmz)*1000000/mz)
-            self.ui.pl1.twinxs[0].hist(mzdifferrors, 50, normed=False, facecolor='green', alpha=0.5)
-            self.ui.pl1.axes.set_title("Histogram of matched signal pairs - relative m/z error (ppm)")
-            self.ui.pl1.axes.set_xlabel("Relative m/z error (ppm)")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - relative mz error vs intensity":
-            mzdifferrors=[]
-            intensities=[]
-            for row in self.currentOpenResultsFile.curs.execute("SELECT mz, lmz, tmz, xcount, loading, intensity FROM mzs"):
-                mz, lmz, tmz, xcount, loading, intensity=row
-                mzdifferrors.append((lmz-mz-tmz)*1000000/mz)
-                intensities.append(log10(intensity))
-            self.ui.pl1.twinxs[0].plot(mzdifferrors, intensities, 'ro')
-            self.ui.pl1.axes.set_title("Matched signal pairs - relative m/z error (ppm) vs. signal intensity")
-            self.ui.pl1.axes.set_xlabel("Relative m/z error (ppm)")
-            self.ui.pl1.axes.set_ylabel("Log10(Signal intensity)")
-            self.drawCanvas(self.ui.pl1)
-
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - relative mzbin deviation":
-            mzdeviations=[]
-            for row in self.currentOpenResultsFile.curs.execute("SELECT mzbinid, min(mzs.mz), max(mzs.mz), count(mzs.mz) FROM mzbinskids INNER JOIN mzs ON mzs.id=mzbinskids.mzid GROUP BY mzbinid"):
-                binid, mzmin, mzmax, n=row
-                if n>1:
-                    mzdeviations.append((mzmax-mzmin)*1000000/mzmin)
-            self.ui.pl1.twinxs[0].hist(mzdeviations, 50, normed=False, facecolor='green', alpha=0.5)
-            self.ui.pl1.axes.set_title("Histogram of binned signal pairs - relative m/z variance (ppm)")
-            self.ui.pl1.axes.set_xlabel("Relative m/z deviation (ppm)")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - feature pair correlations":
-            peaksCorr=[]
-            for row in self.currentOpenResultsFile.curs.execute("SELECT peaksCorr FROM chromPeaks"):
-                peakCorr,=row
-                peaksCorr.append(peakCorr)
-            self.ui.pl1.twinxs[0].hist(peaksCorr, [i/100. for i in range(-100, 100, 1)], normed=False, facecolor='green', alpha=0.5)
-            self.ui.pl1.axes.set_title("Histogram of matched feature pairs - peak correlations")
-            self.ui.pl1.axes.set_xlabel("Peak correlation")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - feature pair mp1 to m ratio abs":
-            peaksRatio=[]
-            text, ok = QtGui.QInputDialog.getText(self.parentWidget(), "Isotopic enrichment", "Please enter the isotopic enrichment to be used for the diagnostics plot (e.g. 0.9893)", text="0.9893")
-            isoEnr=0.9893
-            if ok:
-                text=text.replace(",", ".")
-                isoEnr=float(text)
-            for row in self.currentOpenResultsFile.curs.execute("SELECT peaksRatioMp1, xcount FROM chromPeaks"):
-                peakRatio,xcount=row
-                if peakRatio==-1:
-                    peaksRatio.append(-100.)
-                else:
-                    peaksRatio.append(100.*max(-100, min(100, peakRatio-getNormRatio(isoEnr, xcount, 1))))
-            self.ui.pl1.twinxs[0].hist(peaksRatio, [i for i in [i/10. for i in range(-1000, 1000, 25)]], normed=False, facecolor='green', alpha=0.5)
-            self.ui.pl1.axes.set_title("Histogram of isotopolog ratio error - observed minus theoretical ratio for M+1 to M")
-            self.ui.pl1.axes.set_xlabel("Ratio error (%)")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - feature pair mp1 to m ratio rel":
-            peaksRatio=[]
-            text, ok = QtGui.QInputDialog.getText(self.parentWidget(), "Isotopic enrichment", "Please enter the isotopic enrichment to be used for the diagnostics plot (e.g. 0.9893)", text="0.9893")
-            isoEnr=0.9893
-            if ok:
-                text=text.replace(",", ".")
-                isoEnr=float(text)
-            for row in self.currentOpenResultsFile.curs.execute("SELECT peaksRatioMp1, xcount FROM chromPeaks"):
-                peakRatio,xcount=row
-                if peakRatio==-1:
-                    peaksRatio.append(-100.)
-                else:
-                    peaksRatio.append(max(-100, min(100, 100*(peakRatio/getNormRatio(isoEnr, xcount, 1)-1))))
-            self.ui.pl1.twinxs[0].hist(peaksRatio, [i for i in [i/10. for i in range(-1000, 1000, 25)]], normed=False, facecolor='green', alpha=0.5)
-            self.ui.pl1.axes.set_title("Histogram of RIA  for M+1 to M")
-            self.ui.pl1.axes.set_xlabel("RIA (%)")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - feature pair mp1 to m IRA vs intensity":
-            peaksRatio=[]
-            areas=[]
-            text, ok = QtGui.QInputDialog.getText(self.parentWidget(), "Isotopic enrichment", "Please enter the isotopic enrichment to be used for the diagnostics plot (e.g. 0.9893)", text="0.9893")
-            isoEnr=0.9893
-            if ok:
-                text=text.replace(",", ".")
-                isoEnr=float(text)
-            for row in self.currentOpenResultsFile.curs.execute("SELECT peaksRatioMp1, xcount, LPeakArea FROM chromPeaks"):
-                peakRatio,xcount,area=row
-                area=log10(area)
-                if peakRatio==-1:
-                    peaksRatio.append(-100.)
-                    areas.append(area)
-                else:
-                    peaksRatio.append(max(-100, min(100, 100*(peakRatio/getNormRatio(isoEnr, xcount, 1)-1))))
-                    areas.append(area)
-            self.ui.pl1.twinxs[0].plot(peaksRatio, areas, 'ro')
-            self.ui.pl1.axes.set_title("RIA for M+1 to M vs peak intensity")
-            self.ui.pl1.axes.set_xlabel("RIA (%)")
-            self.ui.pl1.axes.set_ylabel("Peak Intensity")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - feature pair mPp1 to mP ratio abs":
-            peaksRatio=[]
-            text, ok = QtGui.QInputDialog.getText(self.parentWidget(), "Isotopic enrichment", "Please enter the isotopic enrichment to be used for the diagnostics plot (e.g. 0.986)", text="0.986")
-            isoEnr=0.986
-            if ok:
-                text=text.replace(",", ".")
-                isoEnr=float(text)
-            for row in self.currentOpenResultsFile.curs.execute("SELECT peaksRatioMPm1, xcount FROM chromPeaks"):
-                peakRatio,xcount=row
-                if peakRatio==-1:
-                    peaksRatio.append(-100.)
-                else:
-                    peaksRatio.append(100.*max(-100, min(100, peakRatio-getNormRatio(isoEnr, xcount, 1))))
-            self.ui.pl1.twinxs[0].hist(peaksRatio, [i for i in [i/10. for i in range(-1000, 1000, 25)]], normed=False, facecolor='green', alpha=0.5)
-            self.ui.pl1.axes.set_title("Histogram of isotopolog ratio error - observed minus theoretical ratio for M'-1 to M'\nAssumend enrichment: %.2f%%"%(isoEnr*100))
-            self.ui.pl1.axes.set_xlabel("Ratio error (%)")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - feature pair mPp1 to mP ratio rel":
-            peaksRatio=[]
-            text, ok = QtGui.QInputDialog.getText(self.parentWidget(), "Isotopic enrichment", "Please enter the isotopic enrichment to be used for the diagnostics plot (e.g. 0.986)", text="0.986")
-            isoEnr=0.986
-            if ok:
-                text=text.replace(",", ".")
-                isoEnr=float(text)
-            for row in self.currentOpenResultsFile.curs.execute("SELECT peaksRatioMPm1, xcount FROM chromPeaks"):
-                peakRatio,xcount=row
-                if peakRatio==-1:
-                    peaksRatio.append(-100.)
-                else:
-                    peaksRatio.append(max(-100, min(100, 100*(peakRatio/getNormRatio(isoEnr, xcount, 1)-1))))
-            self.ui.pl1.twinxs[0].hist(peaksRatio, [i for i in [i/10. for i in range(-1000, 1000, 25)]], normed=False, facecolor='green', alpha=0.5)
-            self.ui.pl1.axes.set_title("Histogram of RIA for M'-1 to M'\nAssumend enrichment: %.2f%%"%(isoEnr*100))
-            self.ui.pl1.axes.set_xlabel("RIA (%)")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - feature pair mPp1 to mP IRA vs intensity":
-            peaksRatio=[]
-            areas=[]
-            text, ok = QtGui.QInputDialog.getText(self.parentWidget(), "Isotopic enrichment", "Please enter the isotopic enrichment to be used for the diagnostics plot (e.g. 0.986)", text="0.986")
-            isoEnr=0.986
-            if ok:
-                text=text.replace(",", ".")
-                isoEnr=float(text)
-            for row in self.currentOpenResultsFile.curs.execute("SELECT peaksRatioMPm1, xcount, LPeakArea FROM chromPeaks"):
-                peakRatio,xcount,area=row
-                area=log10(area)
-                if peakRatio==-1:
-                    peaksRatio.append(-100.)
-                    areas.append(area)
-                else:
-                    peaksRatio.append(max(-100, min(100, 100*(peakRatio/getNormRatio(isoEnr, xcount, 1)-1))))
-                    areas.append(area)
-            self.ui.pl1.twinxs[0].plot(peaksRatio, areas, 'ro')
-            self.ui.pl1.axes.set_title("RIA for M'-1 to M' vs peak intensity\nAssumend enrichment: %.2f%%"%(isoEnr*100))
-            self.ui.pl1.axes.set_xlabel("RIA (%)")
-            self.ui.pl1.axes.set_ylabel("Peak Intensity")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - feature pair assigned mzs":
-            assignedmzs=[]
-            for row in self.currentOpenResultsFile.curs.execute("SELECT assignedMZs FROM chromPeaks"):
-                n,=row
-                assignedmzs.append(len(loads(base64.b64decode(n))))
-            self.ui.pl1.twinxs[0].hist(assignedmzs, 30, normed=False, facecolor='green', alpha=0.5)
-            self.ui.pl1.axes.set_title("Histogram of signal pairs assigned to feature pairs")
-            self.ui.pl1.axes.set_xlabel("Number of signal pairs for a feature pair")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - feature pair mz deviation mean":
-            devMeans=[]
-            devVals=[]
-            for row in self.currentOpenResultsFile.curs.execute("SELECT mzdifferrors FROM chromPeaks"):
-                mzdifferrors,=row
-                mzdifferrors=loads(base64.b64decode(mzdifferrors))
-                devMeans.append(mzdifferrors.mean if mzdifferrors.mean is not None else -1)
-            self.ui.pl1.twinxs[0].hist(devMeans, 30, normed=False, facecolor='green', alpha=0.5, label="Means")
-            self.ui.pl1.twinxs[0].legend(loc='upper right')
-            self.ui.pl1.axes.set_title("Histogram of feature pairs (mean m/z) - mean relative m/z error (ppm)")
-            self.ui.pl1.axes.set_xlabel("Mean, relative m/z error (ppm)")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-            removeids=[]
-            for row in self.currentOpenResultsFile.curs.execute("SELECT id, mzdifferrors, mz, nPeakCenterMin/60. FROM chromPeaks ORDER BY nPeakCenterMin"):
-                id, mzdifferrors, mz, rt, = row
-                mzdifferrors = loads(base64.b64decode(mzdifferrors))
-                if mzdifferrors.mean==None or mzdifferrors.mean<1:
-                    removeids.append(id)
-
-            if False:
-                if QtGui.QMessageBox.question(self, "MetExtract",
-                                              "Are you sure you want to delete the some results?\nThis action cannot be undone",
-                                              QtGui.QMessageBox.Yes | QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes:
-                    print "ids to remove", removeids
-                    self.currentOpenResultsFile.curs.execute("DELETE FROM chromPeaks WHERE id in (%s)"%(",".join(str(s) for s in removeids)))
-                    self.currentOpenResultsFile.curs.execute("DELETE FROM featureGroupFeatures WHERE fID in (%s)"%(",".join(str(s) for s in removeids)))
-                    self.currentOpenResultsFile.conn.commit()
-                    print "ids successfully removed"
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - feature pair mz deviation":
-            devMeans=[]
-            devVals=[]
-            for row in self.currentOpenResultsFile.curs.execute("SELECT mzdifferrors FROM chromPeaks"):
-                mzdifferrors,=row
-                mzdifferrors=loads(base64.b64decode(mzdifferrors))
-                devVals.extend([v for v in mzdifferrors.vals if v is not None])
-            self.ui.pl1.twinxs[0].hist(devVals, 30, normed=False, facecolor='blue', alpha=0.5, label="Scan-level")
-            self.ui.pl1.twinxs[0].legend(loc='upper right')
-            self.ui.pl1.axes.set_title("Histogram of feature pairs (all scans) - mean relative m/z error (ppm)")
-            self.ui.pl1.axes.set_xlabel("Mean, relative m/z error (ppm)")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-        elif len(selectedItems)==1 and selectedItems[0].myType == "diagnostic - EIC mz deviation":
-            devVals=[]
-            for row in self.currentOpenResultsFile.curs.execute("SELECT c.id, c.mz, c.NPeakCenter, c.NPeakScale, c.NPeakCenterMin/60., x.mzs, x.mzsL FROM chromPeaks c INNER JOIN XICs x ON c.eicID=x.id"):
-                id, mz, center, scale, peakRT, mzs, mzsL, = row
-                mzs = [float(t) for t in mzs.split(";")]
-                #mzsL = [float(t) for t in mzsL.split(";")]
-                mzsPeak = mzs[max(0, center-int(1.5*scale)):min(len(mzs)-1, center+int(1.5*scale))]
-                #mzsLPeak = mzsL[max(0, center - int(1.5 * scale)):min(len(mzs) - 1, center + int(1.5 * scale))]
-
-                mzsPeak=[t for t in mzsPeak if t>=0]
-                m=mean(mzsPeak)
-                mzsPeak=[t-m for t in mzsPeak]
-                devVals.append(sd(mzsPeak)*1000000/m)
-
-            self.ui.pl1.twinxs[0].hist(devVals, 30, normed=False, facecolor='blue', alpha=0.5, label="Peak-level")
-            self.ui.pl1.twinxs[0].legend(loc='upper right')
-            self.ui.pl1.axes.set_title("Histogram of standard deviations of peak mz deviations")
-            self.ui.pl1.axes.set_xlabel("SD(mz deviation of peak) (ppm)")
-            self.ui.pl1.axes.set_ylabel("Frequency")
-            self.drawCanvas(self.ui.pl1)
-
-
-        #</editor-fold>
-
-        #<editor-fold desc="#feature pair plotting">
-        elif "Features" in plotTypes or "Feature Groups" in plotTypes or "feature" in plotTypes:
-            if self.ui.scaleFeatures.checkState() == QtCore.Qt.Checked:
-                self.ui.pl1.axes.set_ylabel("Intensity [counts; normalised]")
-            else:
-                self.ui.pl1.axes.set_ylabel("Intensity [counts]")
-            if self.ui.autoZoomPlot.checkState() == QtCore.Qt.Checked:
-                self.drawCanvas(self.ui.pl1, ylim=(minIntY * 1.6, maxIntY * 1.6), xlim=(minTime * 0.85, maxTime * 1.15))
-            else:
-                self.drawCanvas(self.ui.pl1)
-        #</editor-fold>
-
-        #<editor-fold desc="#mz and mzbin plotting">
-        elif "MZs" in plotTypes or "mz" in plotTypes or "mzbin" in plotTypes or "MZBins" in plotTypes:
-            colour_LUT = ['#0000FF', '#00FF00', '#FF00FF', '#00FFFF', '#FFFF00', '#FFFFFF', '#F0F0F0', '#0F0F0F']
-
-            # the scatter plot:
-            maxIntX = max([max(x) for x in x_vals])
-            maxIntY = max([max(y) for y in y_vals])
-            colors = []
-            axScatter = self.ui.pl1.axes
-
-            for i in range(self.ui.res_ExtractedData.topLevelItem(2).childCount()):
-                child = self.ui.res_ExtractedData.topLevelItem(2).child(i)
-                assert child.myType == "feature"
-
-                tppm = float(self.getParametersFromCurrentRes("Mass deviation (+/- ppm)"))
-                ppmupper = (1 + tppm / 1000000.)
-                ppmlower = (1 - tppm / 1000000.)
-
-                axScatter.plot([child.myData.NPeakCenterMin / 60. - child.myData.NPeakScale / 60.,
-                                child.myData.NPeakCenterMin / 60. + child.myData.NPeakScale / 60.,
-                                child.myData.NPeakCenterMin / 60. + child.myData.NPeakScale / 60.,
-                                child.myData.NPeakCenterMin / 60. - child.myData.NPeakScale / 60.,
-                                child.myData.NPeakCenterMin / 60. - child.myData.NPeakScale / 60.],
-                               [child.myData.mz * ppmlower, child.myData.mz * ppmlower, child.myData.mz * ppmupper,
-                                child.myData.mz * ppmupper, child.myData.mz * ppmlower], color="red")
-
-                axScatter.plot([child.myData.NPeakCenterMin / 60. - child.myData.NPeakScale / 60.,
-                                child.myData.NPeakCenterMin / 60. + child.myData.NPeakScale / 60.],
-                               [child.myData.mz, child.myData.mz], color="red")
-
-            for i in range(len(x_vals)):
-                colour = colour_LUT[i % len(colour_LUT)]
-                axScatter.scatter(x_vals[i], y_vals[i], color=colour, linewidth=0)
-                colors.append(colour)
-
-            self.ui.pl1.twinxs[0].set_ylabel("m/z")
-            self.ui.pl1.twinxs[0].set_xlabel("Retention time [minutes]")
-            self.drawCanvas(self.ui.pl1, ylim=[0, maxIntY], xlim=[0, maxIntX])
-        #</editor-fold>
-
-        else:
-            self.drawCanvas(self.ui.pl1)
-
-        self.drawCanvas(self.ui.pl3, xlim=(minMZ-max((maxMZ-minMZ)*0.1, 4), maxMZ+max((maxMZ-minMZ)*0.1, 4)), ylim=(minMZH*1.35, maxMZH*1.35))
-    #</editor-fold>
+
+
+            elif item.type == "Features" or item.type == "feature":
+
+                                            #xp = Bunch(id=row.id, mz=float(row.mz), peakCenter=row.PeakCenter,
+                                            #           rt=row.PeakCenterMin, peakScale=row.PeakScale, loading=row.loading,
+                                            #           ionMode=row.ionMode, peakArea=row.PeakArea, foundMatches={"[13C]-2": Bunch(peakRightFlank,peakIndex,peaksRatio,peakScale,peakArea,artificialShift,peakLeftFlank,peaksCorr,peakSNR})
+                                            self.ui.chromPeakName.setText("")
+
+                                            self.ui.res_ExtractedData.setHeaderLabels(QtCore.QStringList(
+                                                ["MZ (/Ionmode Z)", "Rt min", "Xn", "Adducts / in-source fragments / hetero atoms", "Scale M / M'", "Peak cor", "M:M' peaks ratio / area ratio", "Area M / M'", "Scans", "LMZ", "Tracer"]))
+
+
+                                            mzs=[item.data.mz]
+                                            for childi in range(item.childCount()):
+                                                child=item.child(childi)
+                                                mzs.append(child.data.mz)
+                                            for mzi, mz in enumerate(mzs):
+                                                eic, times, scanIds, mzs=self.currentOpenRawFile.getEIC(mz, ppm=self.ui.wavelet_EICppm.value(), filterLine=str(self.ui.positiveScanEvent.currentText()) if item.data.ionMode=="+" else str(self.ui.negativeScanEvent.currentText()))
+
+                                                peakBorder=[int(math.floor(item.data.peakCenter-2*item.data.peakScale)), int(math.ceil(item.data.peakCenter+2*item.data.peakScale))]
+                                                xlims=[times[max(0, int(math.floor(item.data.peakCenter-5*item.data.peakScale)))]/60., times[min(int(math.floor(item.data.peakCenter+5*item.data.peakScale)), len(times)-1)]/60.] if xlims is None else [min(xlims[0], times[max(0, peakBorder[0])]/60.), max(xlims[1], times[min(peakBorder[1], len(times)-1)]/60.)]
+                                                maxIntInBorder=1
+                                                if self.ui.scaleFeatures.isChecked():
+                                                    ints=eic[peakBorder[0]:peakBorder[1]]
+                                                    if any([i>0 for i in ints]):
+                                                        maxIntInBorder=max(ints)
+
+                                                self.drawPlot(self.ui.pl1, plotIndex=0, x=[t/60. for t in times], y=[e/maxIntInBorder for e in eic], ylab="intensity", useCol=useColi, plot=True, label="%s%.5f/%d"%(item.data.ionMode, mz, item.data.loading))
+
+                                            useColi += 1
+
+
+        if xlims is not None and self.ui.autoZoomPlot.isChecked():
+            self.setLimts(self.ui.pl1, xlim=xlims)
+        if self.ui.scaleFeatures.isChecked():
+            self.setLimts(self.ui.pl1, ylim=[-0.05, 1.05])
+        self.drawCanvas(self.ui.pl1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     #<editor-fold desc="### general plotting functions">
     def addArrow(self, plt, point, at, plotIndex=0, fcColor="white", ecColor="white", arrowColor="slategrey", alpha=1,
@@ -5627,10 +4217,12 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         ax = plt.twinxs[plotIndex]
         ax.scatter(x,y)
 
-    def setLimts(self, plt, ylim, xlim):
+    def setLimts(self, plt, ylim=None, xlim=None):
         for ax in plt.twinxs:
-            ax.set_ylim(ylim[0], ylim[1])
-            ax.set_xlim(xlim[0], xlim[1])
+            if ylim is not None:
+                ax.set_ylim(ylim[0], ylim[1])
+            if xlim is not None:
+                ax.set_xlim(xlim[0], xlim[1])
 
     def drawCanvas(self, plt, ylim=None, xlim=None, showLegendOverwrite=True):
         #if ylim is None:
@@ -5668,7 +4260,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         mzs = []
         peaks = []
         for item in self.ui.res_ExtractedData.selectedItems():
-            if item.myType == "feature":
+            if item.type == "feature":
                 if self.ui.pl2A.type is None or self.ui.pl2A.type == "feature":
                     self.ui.pl2A.type = "feature"
                 else:
@@ -5677,19 +4269,19 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                               QtGui.QMessageBox.Ok)
                     continue
 
-                mzs.append(item.myData.id)
-                peaks.append(item.myData.NPeakCenterMin / 60.)
+                mzs.append(item.data.id)
+                peaks.append(item.data.NPeakCenterMin / 60.)
                 xic = []
                 times = []
                 for row in self.currentOpenResultsFile.curs.execute(
-                                "select xic, times, xicL from XICs where id==%d" % item.myData.eicID):
+                                "select xic, times, xicL from XICs where id==%d" % item.data.eicID):
                     xic = [float(t) for t in row[0].split(";")]
                     times = [float(t) / 60. for t in row[1].split(";")]
                     xicL = [float(t) for t in row[2].split(";")]
                 self.ui.pl2A.xics.append(xic)
                 self.ui.pl2A.times.append(times)
-                self.ui.pl2A.peaks.append([item.myData])
-            if item.myType == "MZs":
+                self.ui.pl2A.peaks.append([item.data])
+            if item.type == "MZs":
                 if self.ui.pl2A.type is None or self.ui.pl2A.type == "MZs":
                     self.ui.pl2A.type = "MZs"
                 else:
@@ -5703,9 +4295,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 y = []
                 for j in range(t.childCount()):
                     child = t.child(j)
-                    assert child.myType == "mz"
-                    x.append(child.myData[3] / 60.)
-                    y.append(child.myData[0])
+                    assert child.type == "mz"
+                    x.append(child.data[3] / 60.)
+                    y.append(child.data[0])
 
                 self.ui.pl2A.x_vals.append(x)
                 self.ui.pl2A.y_vals.append(y)
@@ -5816,20 +4408,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             show = False
                     dd.setHidden(not show)
 
-            #process feature groups (perform search on features within groups)   
-            d = self.ui.res_ExtractedData.topLevelItem(3)
-            for v in range(d.childCount()):
-                allShow = False
-                fg = d.child(v)
-                for c in range(fg.childCount()):
-                    dd = fg.child(c)
-                    show = True
-                    for w in range(len(text)):
-                        if len(text[w]) > 0 and not (textl[w](dd.text(w))):  #not(dd.text(w).contains(text[w])):
-                            show = False
-                    dd.setHidden(not show)
-                    allShow = allShow or show
-                fg.setHidden(not allShow)
 
     def setChromPeakName(self):
         cpName = str(self.ui.chromPeakName.text())
@@ -5837,16 +4415,16 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         selectedItems = self.ui.res_ExtractedData.selectedItems()
 
         for item in selectedItems:
-            if item.myType == "Features" or item.myType == "feature":
+            if item.type == "Features" or item.type == "feature":
                 self.currentOpenResultsFile.curs.execute(
                     "UPDATE chrompeaks SET assignedName='%s' WHERE id=%d" % (cpName, item.myID))
                 self.currentOpenResultsFile.conn.commit()
                 item.setText(0, cpName)
-            if item.myType == "FeatureGroup" or item.myType == "featureGroup":
+            if item.type == "FeatureGroup" or item.type == "featureGroup":
                 self.currentOpenResultsFile.curs.execute(
                     "UPDATE featureGroups SET featureName='%s' WHERE id=%d" % (cpName, item.myID))
                 self.currentOpenResultsFile.conn.commit()
-                item.myData = cpName
+                item.data = cpName
                 item.setText(0, cpName)
 
     def openRawFile(self):
@@ -5859,7 +4437,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         for j in range(item.childCount()):
             child = item.child(j)
-            if child.myType == "feature" and child.myID == idToRem:
+            if child.type == "feature" and child.myID == idToRem:
                 todel.add(j)
         todel = list(todel)
         for j in sorted(todel, reverse=True):
@@ -5881,9 +4459,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def delNodeFromResults(self, item):
         chromPeaksRem = 0
         featureGroupsRem = 0
-        if item.myType == "feature":
-            cp = item.myData
-            myType = item.myType
+        if item.type == "feature":
+            cp = item.data
+            type = item.type
             myID = item.myID
             self.currentOpenResultsFile.curs.execute("delete from ChromPeaks where id=%d" % cp.id)
             self.currentOpenResultsFile.curs.execute("delete from featureGroupFeatures where fID=%d" % cp.id)
@@ -5896,7 +4474,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             todel = set()
             for i in range(self.ui.res_ExtractedData.topLevelItem(3).childCount()):
                 featureGroup = self.ui.res_ExtractedData.topLevelItem(3).child(i)
-                assert featureGroup.myType == "featureGroup"
+                assert featureGroup.type == "featureGroup"
                 self.removeChromPeaksFrom(featureGroup, myID)
                 featureGroup.setText(1, "%d" % featureGroup.childCount())
                 if featureGroup.childCount() == 0:
@@ -5906,8 +4484,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 self.ui.res_ExtractedData.topLevelItem(3).removeChild(
                     self.ui.res_ExtractedData.topLevelItem(3).child(i))
                 featureGroupsRem += 1
-        elif item.myType == "featureGroup":
-            myType = item.myType
+        elif item.type == "featureGroup":
+            type = item.type
             myID = item.myID
             partChromPeaks = []
             for j in range(item.childCount()):
@@ -5950,9 +4528,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             tracerName = str(row[2])
 
         d = QtGui.QTreeWidgetItem([str(newName), str(len(items)), "", str(tracerName)])
-        d.myType = "featureGroup"
+        d.type = "featureGroup"
         d.myID = newID
-        d.myData = Bunch(fgID=newID, featureName=newName, tracerName=str(tracerName) )
+        d.data = Bunch(fgID=newID, featureName=newName, tracerName=str(tracerName) )
         self.ui.res_ExtractedData.topLevelItem(3).addChild(d)
 
         self.currentOpenResultsFile.curs.execute("update featureGroupFeatures set fGroupID=%d where fID in (%s)" % (
@@ -5961,12 +4539,12 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         cpCount = 0
         for item in items:
             parent = item.parent()
-            #if len(d.myData) == 3:
-            #    d.myData.append(parent.myData[3])
+            #if len(d.data) == 3:
+            #    d.data.append(parent.data[3])
             parent.removeChild(item)
             parent.setText(1, "%d" % parent.childCount())
             d.addChild(item)
-            xp = item.myData
+            xp = item.data
             sumRt = sumRt + xp.NPeakCenterMin
             cpCount += 1
 
@@ -5996,12 +4574,12 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         parentItems = []
 
         for item in selectedItems:
-            if hasattr(item, "myType"):
-                types.add(item.myType)
+            if hasattr(item, "type"):
+                types.add(item.type)
                 if item.parent() is not None:
                     parentItems.append(item.parent())
-                    if hasattr(item, "myType"):
-                        parentTypes.add(item.parent().myType)
+                    if hasattr(item, "type"):
+                        parentTypes.add(item.parent().type)
             else:
                 types.add("generic item")
         types = list(types)
@@ -6058,15 +4636,15 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 if types[0] == "feature":
                     for item in selectedItems:
                         clipboard.append("%f\t%.2f\t%s\t%d\t%s\t%s\t%s\t%s\t%s" % (
-                            item.myData.mz, item.myData.NPeakCenterMin / 60., item.myData.xCount, item.myData.loading,
-                            item.myData.ionMode, "-", item.myData.tracer, item.myData.adducts, item.myData.heteroAtoms))
+                            item.data.mz, item.data.NPeakCenterMin / 60., item.data.xCount, item.data.loading,
+                            item.data.ionMode, "-", item.data.tracer, item.data.adducts, item.data.heteroAtoms))
                 if types[0] == "featureGroup":
                     for item in selectedItems:
                         for j in range(item.childCount()):
                             child = item.child(j)
                             clipboard.append("%f\t%.2f\t%d\t%d\t%s\t%s\t%s\t%s\t%s" % (
-                                child.myData.mz, child.myData.NPeakCenterMin / 60., child.myData.xCount, child.myData.loading,
-                                child.myData.ionMode, item.myData.fgID, child.myData.tracer, child.myData.adducts, child.myData.heteroAtoms))
+                                child.data.mz, child.data.NPeakCenterMin / 60., child.data.xCount, child.data.loading,
+                                child.data.ionMode, item.data.fgID, child.data.tracer, child.data.adducts, child.data.heteroAtoms))
 
                 pyperclip.copy("\n".join(clipboard))
 
@@ -6106,7 +4684,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     pw.show()
 
                     for item in selectedItems:
-                        assert item.myType == "feature"
+                        assert item.type == "feature"
                     groupName = self.createGroupFrom(selectedItems, action.tracerID)
 
                     pw.hide()

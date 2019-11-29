@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1640</width>
+    <width>1970</width>
     <height>1337</height>
    </rect>
   </property>
@@ -70,7 +70,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="inputTab">
        <attribute name="title">
@@ -4238,8 +4238,8 @@ font: 7pt;</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1790</width>
-             <height>878</height>
+             <width>1940</width>
+             <height>1280</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_15">
@@ -4499,7 +4499,7 @@ font: 7pt;</string>
                 <item row="0" column="1">
                  <widget class="QTabWidget" name="tabWidget_2">
                   <property name="currentIndex">
-                   <number>1</number>
+                   <number>0</number>
                   </property>
                   <widget class="QWidget" name="tab">
                    <attribute name="title">
@@ -4578,20 +4578,6 @@ font: 7pt;</string>
                             </property>
                             <property name="checked">
                              <bool>true</bool>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QCheckBox" name="scaleLabelledFeatures">
-                            <property name="text">
-                             <string>Normalise separately</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QCheckBox" name="showIsotopologues">
-                            <property name="text">
-                             <string>Isotopologues</string>
                             </property>
                            </widget>
                           </item>
@@ -4912,8 +4898,8 @@ font: 7pt;</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1248</width>
-             <height>641</height>
+             <width>1592</width>
+             <height>1262</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_40">
@@ -5173,7 +5159,7 @@ font: 7pt;</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1640</width>
+     <width>1970</width>
      <height>21</height>
     </rect>
    </property>
@@ -5331,8 +5317,6 @@ font: 7pt;</string>
   <tabstop>plotAddLabels</tabstop>
   <tabstop>plotMarkArea</tabstop>
   <tabstop>scaleFeatures</tabstop>
-  <tabstop>scaleLabelledFeatures</tabstop>
-  <tabstop>showIsotopologues</tabstop>
   <tabstop>flattenXIC</tabstop>
   <tabstop>showLegend</tabstop>
   <tabstop>MSLabels</tabstop>
