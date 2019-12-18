@@ -3051,28 +3051,21 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                         pw.getCallingFunction()("text")("Adding statistics columns\n")
                         if False:
                             for group in definedGroups:
-                                preFix="_Stat_N"
+                                preFix="_Stat"
                                 grpName=group.name+preFix
                                 grpAdd(groups, group.name+preFix, group.minFound,
-                                       [grp[(grp.rfind("/") + 1):max(grp.lower().rfind(".mzxml"), grp.lower().rfind(".mzml"))] + "_Area_N" for grp in
-                                        natSort(group.files)])
-                                outputOrder.append(grpName)
-                            for group in definedGroups:
-                                preFix="_Stat_L"
-                                grpName=group.name+preFix
-                                grpAdd(groups, group.name+preFix, group.minFound,
-                                       [grp[(grp.rfind("/") + 1):max(grp.lower().rfind(".mzxml"), grp.lower().rfind(".mzml"))] + "_Area_L" for grp in
+                                       [grp[(grp.rfind("/") + 1):max(grp.lower().rfind(".mzxml"), grp.lower().rfind(".mzml"))] + "_Area" for grp in
                                         natSort(group.files)])
                                 outputOrder.append(grpName)
                         grpStats=[]
                         for group in definedGroups:
-                            preFix="_Stat_fold"
+                            preFix="_GroupStat"
                             grpName=group.name+preFix
                             grpAdd(groups, group.name+preFix, group.minFound,
-                                   [grp[(grp.rfind("/") + 1):max(grp.lower().rfind(".mzxml"), grp.lower().rfind(".mzml"))] + "_fold" for grp in
+                                   [grp[(grp.rfind("/") + 1):max(grp.lower().rfind(".mzxml"), grp.lower().rfind(".mzml"))] + "_Area" for grp in
                                     natSort(group.files)])
                             outputOrder.append(grpName)
-                            grpStats.append((str(group.name+"_Stat_fold"), group.minFound, group.omitFeatures))
+                            grpStats.append((str(group.name+"_GroupStat"), group.minFound, group.omitFeatures))
 
                         addStatsColumnToResults(resFileFull, groups, resFileFull, outputOrder)
 
@@ -4719,8 +4712,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         pw.setValue(0)
         pw.show()
 
-        intensityThreshold = float(QtGui.QInputDialog.getDouble(self, "Intensity threshold", "Please enter the minimal threshold used for importing the data", value=10000, min=0, decimals=0)[0])
-
+        intensaddS
         done=0
         for group in definedGroups:
             for i in range(len(group.files)):
@@ -4836,7 +4828,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                         if peakID[0]!=-1:
 
                             if mostAbundantFile is None or scan.intensity_list[peakID[0]]>mostAbundantFile[1]:
-
                                 mostAbundantFile=(fi, scan.intensity_list[peakID[0]], scan, group.color)
 
                         self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [e/maxN for e in eic], color=group.color, label="M: %s"%(a))

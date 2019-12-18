@@ -442,7 +442,8 @@ class ChromPeakFeature:
                  mz=-1, loading=-1, ionMode="", similarityString="",
                  PeakCenter=-1, PeakCenterMin=-1, PeakScale=-1, SNR=-1, PeakArea=-1, PeakAbundance=-1,
                  heteroIsotoplogs={}, assignedMZs=[], comments=[],
-                 artificialEICLShift=0, foundMatches=None):
+                 artificialEICLShift=0, foundMatches=None,
+                 file=None):
 
         self.id = id
         self.fGroupID = fGroupID
@@ -471,10 +472,12 @@ class ChromPeakFeature:
             foundMatches = []
         self.foundMatches=foundMatches
 
+        self.file=file
+
 
 
     def __str__(self):
-        return "ChromPeakFeature: %f, %d (%f min), %d" % (self.mz, self.NPeakCenter, self.NPeakCenterMin / 60., self.id)
+        return "ChromPeakFeature: %f, %d (%f min), %d, File. '%s'" % (self.mz, self.PeakCenter, self.PeakCenterMin, self.id, self.file)
 
 
 #Faktorial of x

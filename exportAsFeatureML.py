@@ -23,7 +23,7 @@ def writeFeatureListToFeatureML(features, toFile, ppmPM=5, rtPM=0.25*60):
         num    =feature.id
         grpNum =feature.ogroup
         mz     =feature.mz
-        lmz    =feature.lmz
+        #lmz    =feature.lmz
         rt     =feature.rt
         z      =feature.charge
         name   =feature.name
@@ -44,12 +44,12 @@ def writeFeatureListToFeatureML(features, toFile, ppmPM=5, rtPM=0.25*60):
         fileLineArray.append('				<pt x="%f" y="%f" />'%(rt-rtPM, mz*(1+ppmPM/1000000.)))
         fileLineArray.append('				<pt x="%f" y="%f" />'%(rt+rtPM, mz*(1+ppmPM/1000000.)))
         fileLineArray.append('			</convexhull>')
-        fileLineArray.append('			<convexhull nr="2_lab">')
-        fileLineArray.append('				<pt x="%f" y="%f" />'%(rt-rtPM, lmz*(1-ppmPM/1000000.)))
-        fileLineArray.append('				<pt x="%f" y="%f" />'%(rt+rtPM, lmz*(1-ppmPM/1000000.)))
-        fileLineArray.append('				<pt x="%f" y="%f" />'%(rt-rtPM, lmz*(1+ppmPM/1000000.)))
-        fileLineArray.append('				<pt x="%f" y="%f" />'%(rt+rtPM, lmz*(1+ppmPM/1000000.)))
-        fileLineArray.append('			</convexhull>')
+        #fileLineArray.append('			<convexhull nr="2_lab">')
+        #fileLineArray.append('				<pt x="%f" y="%f" />'%(rt-rtPM, lmz*(1-ppmPM/1000000.)))
+        #fileLineArray.append('				<pt x="%f" y="%f" />'%(rt+rtPM, lmz*(1-ppmPM/1000000.)))
+        #fileLineArray.append('				<pt x="%f" y="%f" />'%(rt-rtPM, lmz*(1+ppmPM/1000000.)))
+        #fileLineArray.append('				<pt x="%f" y="%f" />'%(rt+rtPM, lmz*(1+ppmPM/1000000.)))
+        #fileLineArray.append('			</convexhull>')
         fileLineArray.append('		</feature>')
 
     fileLineArray.append('	</featureList>')
@@ -126,7 +126,7 @@ def convertMEMatrixToFeatureMLSepPolarities(meMatrixFile, featureMLFile=None, po
             elif row[0].startswith("#"):
                 pass
             else:
-                b=Bunch(id=row[headers["Num"]], ogroup=row[headers["OGroup"]], mz=float(row[headers["MZ"]]), rt=float(row[headers["RT"]])*60, Xn=row[headers["Xn"]], lmz=float(row[headers["L_MZ"]]),
+                b=Bunch(id=row[headers["Num"]], ogroup=row[headers["OGroup"]], mz=float(row[headers["MZ"]]), rt=float(row[headers["RT"]])*60, Xn=row[headers["Xn"]],
                         charge=int(row[headers["Charge"]]), name=row[headers["Num"]], ionMode=row[headers["Ionisation_Mode"]])
                 features[b.ionMode].append(b)
 

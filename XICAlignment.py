@@ -69,7 +69,7 @@ class XICAlignment:
 
     # aligns the EICs and matches the chromatographic peaks detected earlier
     def alignXIC(self, eics, peakss, scantimes, align=True, nPolynom=3, maxTimeDiff=0.36 * 60, pretend=100, scanDuration=1):
-        assert (len(eics) == len(peakss) == len(scantimes))
+        #assert (len(eics) == len(peakss) == len(scantimes))
 
 
         nPolynom = max(nPolynom, 1)
@@ -80,7 +80,7 @@ class XICAlignment:
         if len(eics) == 1:
             ret = []
             for i in range(len(peakss[0])):
-                ret.append([[i, peakss[0][i].NPeakCenter]])
+                ret.append([[i, peakss[0][i].PeakCenter]])
             return ret
 
         # add a constant part before and after the actual EIC as an anchor for the alignment
@@ -93,9 +93,9 @@ class XICAlignment:
             eics[i] = mapArrayToRefTimes(eics[i], scantimesEnlarged[i], refTimes)
             # peak translation to ref Time
             for j in range(len(peakss[i])):
-                peakTime = scantimes[i][peakss[i][j].NPeakCenter]+pretend*scanDuration
+                peakTime = scantimes[i][peakss[i][j].PeakCenter]+pretend*scanDuration
                 minindex, minvalue = min(enumerate([abs(z - peakTime) for z in refTimes]), key=lambda x:x[1])
-                peakss[i][j].NPeakCenter = minindex
+                peakss[i][j].PeakCenter = minindex
 
 
         # convert the EICs to R-function parameters
@@ -120,7 +120,7 @@ class XICAlignment:
                 peakssR = peakssR + ","
             else:
                 append = True
-            peakssR = peakssR + ",".join([str(peak.NPeakCenter) for peak in peaks])
+            peakssR = peakssR + ",".join([str(peak.PeakCenter) for peak in peaks])
             if len(peaks) < maxPeaks:
                 peakssR = peakssR + "," + ",".join([str(0) for p in range(len(peaks), maxPeaks)])
 
