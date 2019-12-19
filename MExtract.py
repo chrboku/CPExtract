@@ -1834,7 +1834,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     fileMappingData[fileRes.resID].append(fileRes)
 
                 for fp in SQLSelectAsObject(self.experimentResults.curs, "SELECT 'featurePair' AS type, id, OGroup AS metaboliteGroupID, mz, rt, similarityString, charge, scanEvent, ionisationMode, (SELECT COUNT(*) FROM FoundFeaturePairs WHERE resID=id) AS FOUNDINCOUNT FROM GroupResults ORDER BY mz"):
-                    featurePair=QtGui.QTreeWidgetItem(["%s (/%d)"%(str(fp.id), int(fp.FOUNDINCOUNT)), "%.4f"%fp.mz, "%.2f"%(fp.rt/60.), str(fp.similarityString), str(fp.charge), str(fp.ionisationMode)])
+                    featurePair=QtGui.QTreeWidgetItem(["%s (/%d)"%(str(fp.id), int(fp.FOUNDINCOUNT)), "%.4f"%fp.mz, "%.2f"%(fp.rt), str(fp.similarityString), str(fp.charge), str(fp.ionisationMode)])
                     featurePair.bunchData=fp
                     metaboliteGroupTreeItems[fp.metaboliteGroupID].addChild(featurePair)
 
@@ -4705,6 +4705,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
 
     def loadAllSamples(self):
+        intensityThreshold = float(QtGui.QInputDialog.getDouble(self, "Intensity threshold", "Please enter the minimal threshold used for importing the data", value=10000, min=0, decimals=0)[0])
         definedGroups = [t.data(QListWidgetItem.UserType).toPyObject() for t in natSort(self.ui.groupsList.findItems('*', QtCore.Qt.MatchWildcard), key=lambda x: str(x.data(QListWidgetItem.UserType).toPyObject().name))]
         self.loadedMZXMLs={}
 
@@ -4791,8 +4792,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             meanRT.append(pi.rt)
 
-            rtBorderMin=pi.rt/60.-borderOffset
-            rtBorderMax=pi.rt/60.+borderOffset
+            rtBorderMin=pi.rt-borderOffset
+            rtBorderMax=pi.rt+borderOffset
 
             for grpInd, group in enumerate(definedGroups):
                 for i in range(len(group.files)):
@@ -4801,17 +4802,17 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     if pi.scanEvent in self.loadedMZXMLs[fi].getFilterLines(includeMS1=True, includeMS2=False, includePosPolarity=True, includeNegPolarity=True):
 
                         eic, times, scanIds, mzs=self.loadedMZXMLs[fi].getEIC(pi.mz, ppm=ppm, filterLine=pi.scanEvent)
-                        eicL, times, scanIds, mzs = self.loadedMZXMLs[fi].getEIC(pi.lmz, ppm=ppm, filterLine=pi.scanEvent)
+                        #eicL, times, scanIds, mzs = self.loadedMZXMLs[fi].getEIC(pi.lmz, ppm=ppm, filterLine=pi.scanEvent)
 
                         maxN=1
                         maxL=1
 
-                        if self.ui.resultsExperimentNormaliseXICs_checkBox.isChecked()  or self.ui.resultsExperimentNormaliseXICsSeparately_checkBox.isChecked():
+                        if False and self.ui.resultsExperimentNormaliseXICs_checkBox.isChecked()  or self.ui.resultsExperimentNormaliseXICsSeparately_checkBox.isChecked():
                             m=0
                             ml=0
                             for j in range(len(eic)):
 
-                                if abs(pi.rt/60-(times[j]/60.))<=0.2:
+                                if abs(pi.rt-(times[j]))<=0.2:
                                     m=max(m, eic[j])
                                     ml=max(ml, eicL[j])
                             if m!=0:
@@ -4819,13 +4820,13 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             if ml!=0:
                                 maxL=ml
 
-                        if self.ui.resultsExperimentNormaliseXICs_checkBox.isChecked():
+                        if False and self.ui.resultsExperimentNormaliseXICs_checkBox.isChecked():
                             maxN=maxL
 
-                        intlim[0] = min(intlim[0], min([-eicL[j]/maxL for j in range(len(eic)) if rtBorderMin <= times[j] / 60. <= rtBorderMax]))
+                        #intlim[0] = min(intlim[0], min([-eicL[j]/maxL for j in range(len(eic)) if rtBorderMin <= times[j] / 60. <= rtBorderMax]))
                         intlim[1] = max(intlim[1], max([eic[j]/maxN for j in range(len(eic)) if rtBorderMin <= times[j] / 60. <= rtBorderMax]))
 
-                        scan=self.loadedMZXMLs[fi].getClosestMS1Scan(pi.rt/60., filterLine=pi.scanEvent)
+                        scan=self.loadedMZXMLs[fi].getClosestMS1Scan(pi.rt, filterLine=pi.scanEvent)
                         peakID=scan.findMZ(pi.mz, ppm=ppm)
                         if peakID[0]!=-1:
 
@@ -4833,16 +4834,16 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                 mostAbundantFile=(fi, scan.intensity_list[peakID[0]], scan, group.color)
 
                         self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [e/maxN for e in eic], color=group.color, label="M: %s"%(a))
-                        self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [-e/maxL for e in eicL], color=group.color, label="M': %s"%(a))
+                        #self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [-e/maxL for e in eicL], color=group.color, label="M': %s"%(a))
 
                         self.ui.resultsExperimentSeparatedPeaks_plot.axes.plot([t / 60. + grpInd for t in times if rtBorderMin<=t/60.<=rtBorderMax], [eic[j]/maxN for j in range(len(eic)) if rtBorderMin<=times[j]/60.<=rtBorderMax], color=group.color, label="M: %s"%(a))
-                        self.ui.resultsExperimentSeparatedPeaks_plot.axes.plot([t / 60. + grpInd for t in times if rtBorderMin<=t/60.<=rtBorderMax], [-eicL[j]/maxL for j in range(len(eicL)) if rtBorderMin<=times[j]/60.<=rtBorderMax], color=group.color, label="M': %s"%(a))
+                        #self.ui.resultsExperimentSeparatedPeaks_plot.axes.plot([t / 60. + grpInd for t in times if rtBorderMin<=t/60.<=rtBorderMax], [-eicL[j]/maxL for j in range(len(eicL)) if rtBorderMin<=times[j]/60.<=rtBorderMax], color=group.color, label="M': %s"%(a))
 
 
             maxSigAbundance=0
             if mostAbundantFile is not None:
 
-                #self.ui.resultsExperiment_plot.axes.axvline(x=pi.rt/60., color=mostAbundantFile[3])
+                self.ui.resultsExperiment_plot.axes.axvline(x=pi.rt, color=mostAbundantFile[3])
 
                 self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=mostAbundantFile[2].mz_list, ymin=0, ymax=mostAbundantFile[2].intensity_list,
                                                                       color="lightgrey")
@@ -4852,13 +4853,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 if peakID[0] != -1:
                     intLeft=mostAbundantFile[2].intensity_list[peakID[0]]
 
-                intRight=0
-                mz = pi.lmz
-                peakID = mostAbundantFile[2].findMZ(mz, ppm=ppm)
-                if peakID[0] != -1:
-                    intRight=mostAbundantFile[2].intensity_list[peakID[0]]
-
-
 
                 for i in [0,1,2,3,4,5,6]:
                     mz=pi.mz+1.00335484*i
@@ -4867,16 +4861,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                         self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=mz, ymin=0, ymax=mostAbundantFile[2].intensity_list[peakID[0]],
                                                                               color=mostAbundantFile[3], linewidth=2.0)
                     mz=pi.mz-1.00335484*i
-                    peakID = mostAbundantFile[2].findMZ(mz, ppm=ppm)
-                    if peakID[0]!=-1:
-                        self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=mz, ymin=0, ymax=mostAbundantFile[2].intensity_list[peakID[0]],
-                                                                              color=mostAbundantFile[3], linewidth=2.0)
-                    mz=pi.lmz-1.00335484*i
-                    peakID = mostAbundantFile[2].findMZ(mz, ppm=ppm)
-                    if peakID[0]!=-1:
-                        self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=mz, ymin=0, ymax=mostAbundantFile[2].intensity_list[peakID[0]],
-                                                                              color=mostAbundantFile[3], linewidth=2.0)
-                    mz=pi.lmz+1.00335484*i
                     peakID = mostAbundantFile[2].findMZ(mz, ppm=ppm)
                     if peakID[0]!=-1:
                         self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=mz, ymin=0, ymax=mostAbundantFile[2].intensity_list[peakID[0]],
@@ -4891,11 +4875,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                         (pi.mz + (1.00335 * i) ) * (2 * annotationPPM / 1000000.), intLeft,
                         edgecolor='none', facecolor='purple', alpha=0.4))
 
-                    self.ui.resultsExperimentMSScanPeaks_plot.axes.add_patch(patches.Rectangle(
-                        ((pi.lmz + (1.00335 * i) ) * (1. - annotationPPM / 1000000.), intRight * 0),
-                        (pi.lmz + (1.00335 * i) ) * (2 * annotationPPM / 1000000.), intRight,
-                        edgecolor='none', facecolor='purple', alpha=0.4))
-
 
                     rat=getNormRatio(0.9893, 15, i)
                     self.ui.resultsExperimentMSScanPeaks_plot.axes.add_patch(patches.Rectangle(
@@ -4903,25 +4882,16 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                         (pi.mz + (1.00335 * i) ) * (4 * annotationPPM / 1000000.), intLeft*rat*0.04,
                         edgecolor='none', facecolor='orange', alpha=0.8))
 
-                    rat = getNormRatio(0.993, 15, i)
-                    self.ui.resultsExperimentMSScanPeaks_plot.axes.add_patch(patches.Rectangle(
-                        ((pi.lmz + (1.00335 * i) ) * (1. - 2*annotationPPM / 1000000.), intRight * rat*0.98),
-                        (pi.lmz + (1.00335 * i) ) * (4 * annotationPPM / 1000000.), intRight*rat*0.04,
-                        edgecolor='none', facecolor='orange', alpha=0.8))
-
                 peakID = mostAbundantFile[2].findMZ(pi.mz, ppm=ppm)
-                peakID2 = mostAbundantFile[2].findMZ(pi.lmz, ppm=ppm)
 
                 if peakID[0]!=-1:
                     maxSigAbundance=max(maxSigAbundance, mostAbundantFile[2].intensity_list[peakID[0]])
-                if peakID2[0]!=-1:
-                    maxSigAbundance=max(maxSigAbundance, mostAbundantFile[2].intensity_list[peakID2[0]])
 
         if len(plotItems)==1:
             pi=plotItems[0]
             for grpInd, group in enumerate(definedGroups):
-                self.ui.resultsExperimentSeparatedPeaks_plot.axes.axvline(x=grpInd+pi.rt/60., color=group.color)
-                self.ui.resultsExperimentSeparatedPeaks_plot.axes.text(x=grpInd-0.05+pi.rt/60., y=intlim[1]*1.75, s=group.name, rotation=90, horizontalalignment='left', color=group.color, backgroundcolor="white")
+                self.ui.resultsExperimentSeparatedPeaks_plot.axes.axvline(x=grpInd+pi.rt, color=group.color)
+                self.ui.resultsExperimentSeparatedPeaks_plot.axes.text(x=grpInd-0.05+pi.rt, y=intlim[1]*1.75, s=group.name, rotation=90, horizontalalignment='left', color=group.color, backgroundcolor="white")
             intlim[1]=intlim[1]*1.5
 
         self.ui.resultsExperiment_plot.axes.set_title("Overlaid EICs of selected feature pairs or groups")
@@ -4929,16 +4899,16 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.resultsExperiment_plot.axes.set_ylabel("Intensity")
         self.ui.resultsExperimentSeparatedPeaks_plot.axes.set_title("Overlaid EICs of selected feature pairs or groups (separated artificially by respective experimental group)")
         if len(plotItems)==1:
-            self.ui.resultsExperimentSeparatedPeaks_plot.axes.set_title("Overlaid EICs of %.5f (%.5f), %.2f min, %s\n(separated artificially by respective experimental group to improve comparison)\n"%(plotItems[0].mz, plotItems[0].lmz, plotItems[0].rt/60., plotItems[0].scanEvent))
+            self.ui.resultsExperimentSeparatedPeaks_plot.axes.set_title("Overlaid EICs of %.5f, %.2f min, %s\n(separated artificially by respective experimental group to improve comparison)\n"%(plotItems[0].mz, plotItems[0].rt, plotItems[0].scanEvent))
         self.ui.resultsExperimentSeparatedPeaks_plot.axes.set_xlabel("Retention time (min) of feature + groupIndex (0-based)")
         self.ui.resultsExperimentSeparatedPeaks_plot.axes.set_ylabel("Intensity")
 
 
-        rtlim=[mean(meanRT)/60.-borderOffset, mean(meanRT)/60.+borderOffset]
+        rtlim=[mean(meanRT)-borderOffset, mean(meanRT)+borderOffset]
         intlim=[intlim[0]*1.1, intlim[1]*1.1]
         self.drawCanvas(self.ui.resultsExperiment_plot, xlim=rtlim, ylim=intlim)
         self.drawCanvas(self.ui.resultsExperimentSeparatedPeaks_plot, showLegendOverwrite=False)
-        self.drawCanvas(self.ui.resultsExperimentMSScanPeaks_plot, xlim=[pi.mz-5, pi.lmz+5], ylim=[0, maxSigAbundance])
+        self.drawCanvas(self.ui.resultsExperimentMSScanPeaks_plot, xlim=[pi.mz-5, pi.mz+15], ylim=[0, maxSigAbundance])
 
 
     def exportAsPDF(self, pdfFile=None):
