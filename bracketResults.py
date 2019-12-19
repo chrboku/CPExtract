@@ -100,7 +100,7 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
 
 
         resDB.curs.execute("DROP TABLE IF EXISTS GroupResults")
-        resDB.curs.execute("CREATE TABLE GroupResults(id INTEGER PRIMARY KEY, mz FLOAT, lmz FLOAT, dmz FLOAT, rt FLOAT, xn INTEGER, charge INTEGER, scanEvent TEXT, ionisationMode TEXT, tracer TEXT, OGroup INTEGER, Ion TEXT, LOSS TEXT, M TEXT)")
+        resDB.curs.execute("CREATE TABLE GroupResults(id INTEGER PRIMARY KEY, mz FLOAT, rt FLOAT, similarityString INTEGER, charge INTEGER, scanEvent TEXT, ionisationMode TEXT, OGroup INTEGER, Ion TEXT, LOSS TEXT, M TEXT)")
 
         resDB.curs.execute("DROP TABLE IF EXISTS FoundFeaturePairs")
         resDB.curs.execute("CREATE TABLE FoundFeaturePairs(resID INTEGER, file TEXT, featurePairID INTEGER, featureGroupID INTEGER, NPeakScale FLOAT, LPeakScale FLOAT, NBorderLeft FLOAT, NBorderRight FLOAT, LBorderLeft FLOAT, " \
@@ -242,7 +242,6 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
                             totalThingsToDo+=1
 
             doneSoFar=0
-            doneSoFarPercent=0
             if pwMaxSet is not None: pwMaxSet.put(Bunch(mes="max", val=totalThingsToDo))
 
             # bracket data
@@ -438,7 +437,7 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
                                                                                             avgPeakScale, xCount, cLoading, scanEvent, ionMode, "",
                                                                                             "", "", "", ""]]))
 
-                                                        #SQLInsert(resDB.curs, "GroupResults", id=curNum, mz=avgmz, rt=avgtime, xn=xCount, charge=cLoading, ionisationMode=ionMode, scanEvent=scanEvent)
+                                                        SQLInsert(resDB.curs, "GroupResults", id=curNum, mz=avgmz, rt=avgtime, similarityString=xCount, charge=cLoading, ionisationMode=ionMode, scanEvent=scanEvent)
 
                                                         doublePeak = 0
                                                         for j in range(len(results)):
@@ -455,29 +454,10 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
 
                                                                 doublePeak = doublePeak + len(groupedChromPeaks[i][res]) -1
 
-                                                                ## Native peak area
+                                                                ## Peak area
                                                                 f.write(";".join([str(peak[1].PeakArea) for peak in groupedChromPeaks[i][res]]))
-                                                                f.write("\t")
-                                                                ## Labeled peak area
-                                                                #f.write(";".join([str(peak[1].LPeakArea) for peak in groupedChromPeaks[i][res]]))
-                                                                #f.write("\t")
-                                                                ## Native peak intensity
-                                                                #f.write(";".join([str(peak[1].NPeakAbundance) for peak in groupedChromPeaks[i][res]]))
-                                                                #f.write("\t")
-                                                                ## Labeled peak intensity
-                                                                #f.write(";".join([str(peak[1].LPeakAbundance) for peak in groupedChromPeaks[i][res]]))
-                                                                #f.write("\t")
-                                                                ## Peak abundance fold
-                                                                #f.write(";".join([str(peak[1].NPeakArea / peak[1].LPeakArea) for peak in groupedChromPeaks[i][res]]))
-                                                                #f.write("\t")
-                                                                ## Peak id in file
-                                                                #f.write(";".join([str(peak[1].id) for peak in groupedChromPeaks[i][res]]))
-                                                                #f.write("\t")
-
-                                                            else:
-                                                                f.write("\t")
-                                                        f.write("%d" % doublePeak)
-                                                        f.write("END\n")
+                                                        f.write("\t%d" % doublePeak)
+                                                        f.write("\n")
 
 
                                             except Exception as e:
