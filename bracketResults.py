@@ -100,11 +100,11 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
 
 
         resDB.curs.execute("DROP TABLE IF EXISTS GroupResults")
-        resDB.curs.execute("CREATE TABLE GroupResults(id INTEGER PRIMARY KEY, mz FLOAT, rt FLOAT, similarityString INTEGER, charge INTEGER, scanEvent TEXT, ionisationMode TEXT, OGroup INTEGER, Ion TEXT, LOSS TEXT, M TEXT)")
+        resDB.curs.execute("CREATE TABLE GroupResults(id INTEGER PRIMARY KEY, mz FLOAT, rt FLOAT, similarityString TEXT, charge INTEGER, scanEvent TEXT, ionisationMode TEXT, OGroup INTEGER, Ion TEXT, LOSS TEXT, M TEXT)")
 
         resDB.curs.execute("DROP TABLE IF EXISTS FoundFeaturePairs")
-        resDB.curs.execute("CREATE TABLE FoundFeaturePairs(resID INTEGER, file TEXT, featurePairID INTEGER, featureGroupID INTEGER, NPeakScale FLOAT, LPeakScale FLOAT, NBorderLeft FLOAT, NBorderRight FLOAT, LBorderLeft FLOAT, " \
-                            "LBorderRight FLOAT, areaN FLOAT, areaL FLOAT, featureType TEXT)")
+        resDB.curs.execute("CREATE TABLE FoundFeaturePairs(resID INTEGER, file TEXT, featurePairID INTEGER, featureGroupID INTEGER, PeakScale FLOAT, " \
+                            "Area FLOAT, featureType TEXT)")
 
         resDB.curs.execute("DROP TABLE IF EXISTS FileMapping")
         resDB.curs.execute("CREATE TABLE FileMapping(fileName TEXT, filePath TEXT, groupID INTEGER)")
@@ -149,11 +149,6 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
             f.write("Num\tComment\tMZ\tMZ_Range\tRT\tRT_Range\tPeakScales\tXn\tCharge\tScanEvent\tIonisation_Mode\tOGroup\tIon\tLoss\tM")
             for res in results:
                 f.write("\t" + res.fileName + "_Area")
-                #f.write("\t" + res.fileName + "_Area_L")
-                #f.write("\t" + res.fileName + "_Abundance_N")
-                #f.write("\t" + res.fileName + "_Abundance_L")
-                #f.write("\t" + res.fileName + "_Fold")
-                #f.write("\t" + res.fileName + "_FID")
 
             f.write("\tdoublePeak")
             f.write("\n")
@@ -437,7 +432,7 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
                                                                                             avgPeakScale, xCount, cLoading, scanEvent, ionMode, "",
                                                                                             "", "", "", ""]]))
 
-                                                        SQLInsert(resDB.curs, "GroupResults", id=curNum, mz=avgmz, rt=avgtime, similarityString=xCount, charge=cLoading, ionisationMode=ionMode, scanEvent=scanEvent)
+                                                        SQLInsert(resDB.curs, "GroupResults", id=curNum, OGroup=curNum, mz=avgmz, rt=avgtime, similarityString=xCount, charge=cLoading, ionisationMode=ionMode, scanEvent=scanEvent)
 
                                                         doublePeak = 0
                                                         for j in range(len(results)):
@@ -445,12 +440,11 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
                                                             f.write("\t")
                                                             if groupedChromPeaks[i].has_key(res) and len(groupedChromPeaks[i][res]) > 0:
 
-                                                                #for peak in groupedChromPeaks[i][res]:
-                                                                #    SQLInsert(resDB.curs, "FoundFeaturePairs", file=results[j].fileName, featurePairID=peak[1].id, featureGroupID=peak[1].fGroupID, resID=curNum,
-                                                                #              NPeakScale=peak[1].NPeakScale, LPeakScale=peak[1].LPeakScale,
-                                                                #              NBorderLeft=peak[1].NBorderLeft, NBorderRight=peak[1].NBorderRight,
-                                                                #              LBorderLeft=peak[1].LBorderLeft, LBorderRight=peak[1].LBorderRight,
-                                                                #              areaN=peak[1].NPeakArea, areaL=peak[1].LPeakArea, featureType="foundPattern")
+                                                                for peak in groupedChromPeaks[i][res]:
+                                                                    SQLInsert(resDB.curs, "FoundFeaturePairs", file=peak[1].file, featurePairID=peak[1].id,
+                                                                              resID=curNum,
+                                                                              PeakScale=peak[1].PeakScale,
+                                                                              Area=peak[1].PeakArea, featureType="foundPattern")
 
                                                                 doublePeak = doublePeak + len(groupedChromPeaks[i][res]) -1
 

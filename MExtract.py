@@ -1827,19 +1827,19 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     metaboliteGroupTreeItems[metaboliteGroup.metaboliteGroupID]=metaboliteGroupTreeItem
 
                 fileMappingData={}
-                for fileRes in SQLSelectAsObject(self.experimentResults.curs, "SELECT 'fileResult' AS type, resID, file, areaN, areaL FROM FoundFeaturePairs"):
+                for fileRes in SQLSelectAsObject(self.experimentResults.curs, "SELECT 'fileResult' AS type, resID, file, Area FROM FoundFeaturePairs"):
                     if fileRes.resID not in fileMappingData.keys():
                         fileMappingData[fileRes.resID]=[]
 
                     fileMappingData[fileRes.resID].append(fileRes)
 
-                for fp in SQLSelectAsObject(self.experimentResults.curs, "SELECT 'featurePair' AS type, id, OGroup AS metaboliteGroupID, mz, lmz, dmz, rt, xn, charge, scanEvent, ionisationMode, tracer, (SELECT COUNT(*) FROM FoundFeaturePairs WHERE resID=id) AS FOUNDINCOUNT FROM GroupResults ORDER BY mz"):
-                    featurePair=QtGui.QTreeWidgetItem(["%s (/%d)"%(str(fp.id), int(fp.FOUNDINCOUNT)), "%.4f"%fp.mz, "%.2f"%(fp.rt/60.), str(fp.xn), str(fp.charge), str(fp.ionisationMode)])
+                for fp in SQLSelectAsObject(self.experimentResults.curs, "SELECT 'featurePair' AS type, id, OGroup AS metaboliteGroupID, mz, rt, similarityString, charge, scanEvent, ionisationMode, (SELECT COUNT(*) FROM FoundFeaturePairs WHERE resID=id) AS FOUNDINCOUNT FROM GroupResults ORDER BY mz"):
+                    featurePair=QtGui.QTreeWidgetItem(["%s (/%d)"%(str(fp.id), int(fp.FOUNDINCOUNT)), "%.4f"%fp.mz, "%.2f"%(fp.rt/60.), str(fp.similarityString), str(fp.charge), str(fp.ionisationMode)])
                     featurePair.bunchData=fp
                     metaboliteGroupTreeItems[fp.metaboliteGroupID].addChild(featurePair)
 
                     for fileRes in fileMappingData[fp.id]:
-                        fileResNode=QtGui.QTreeWidgetItem([str(fileRes.file), str(fileRes.areaN), str(fileRes.areaL)])
+                        fileResNode=QtGui.QTreeWidgetItem([str(fileRes.file), str(fileRes.Area)])
                         fileResNode.bunchData=fileRes
 
                         color=None
@@ -1900,8 +1900,11 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                 ##TODO finish that
         except Exception as e:
+            import traceback
+            traceback.print_exc()
+            logging.error(str(traceback))
+
             logging.error("Multiple file results could not be fetched correctly: "+e.message)
-            pass
 
 
 
@@ -4712,7 +4715,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         pw.setValue(0)
         pw.show()
 
-        intensaddS
         done=0
         for group in definedGroups:
             for i in range(len(group.files)):
