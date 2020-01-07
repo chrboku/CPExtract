@@ -49,7 +49,6 @@ class PresenceRule(Rule):
                 ratio=isotopologDict[self.otherIsotopolog].intensity/isotopologDict[isotopolog].intensity
 
                 if window[0] <= ratio <= window[1]:
-
                     pass
                 else:
                     ratWinPassed=False

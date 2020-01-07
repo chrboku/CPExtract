@@ -70,7 +70,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="inputTab">
        <attribute name="title">
@@ -952,22 +952,6 @@ font: 7pt;</string>
            <layout class="QGridLayout" name="gridLayout_10">
             <item row="0" column="0">
              <layout class="QGridLayout" name="gridLayout_27">
-              <item row="3" column="0">
-               <spacer name="verticalSpacer_19">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::Fixed</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>80</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
               <item row="2" column="0" colspan="2">
                <widget class="QFrame" name="frame_procIndFiles">
                 <property name="minimumSize">
@@ -2693,19 +2677,39 @@ p, li { white-space: pre-wrap; }
                        </item>
                        <item>
                         <layout class="QGridLayout" name="gridLayout_34">
-                         <item row="0" column="1">
-                          <widget class="QPushButton" name="setupTracers">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
+                         <item row="0" column="2">
+                          <spacer name="horizontalSpacer_32">
+                           <property name="orientation">
+                            <enum>Qt::Horizontal</enum>
                            </property>
-                           <property name="toolTip">
-                            <string>Click to specify used Xenobiotics or tracers for the metabolisation study</string>
+                           <property name="sizeHint" stdset="0">
+                            <size>
+                             <width>0</width>
+                             <height>0</height>
+                            </size>
                            </property>
+                          </spacer>
+                         </item>
+                         <item row="2" column="0" colspan="3">
+                          <spacer name="verticalSpacer_26">
+                           <property name="orientation">
+                            <enum>Qt::Vertical</enum>
+                           </property>
+                           <property name="sizeType">
+                            <enum>QSizePolicy::Fixed</enum>
+                           </property>
+                           <property name="sizeHint" stdset="0">
+                            <size>
+                             <width>0</width>
+                             <height>5</height>
+                            </size>
+                           </property>
+                          </spacer>
+                         </item>
+                         <item row="3" column="0" colspan="3">
+                          <widget class="QLabel" name="tracerExperimentLabel">
                            <property name="text">
-                            <string>Tracer setup</string>
+                            <string>No tracers configured</string>
                            </property>
                           </widget>
                          </item>
@@ -2722,41 +2726,58 @@ p, li { white-space: pre-wrap; }
                            </property>
                           </spacer>
                          </item>
-                         <item row="0" column="2">
-                          <spacer name="horizontalSpacer_32">
-                           <property name="orientation">
-                            <enum>Qt::Horizontal</enum>
+                         <item row="0" column="1">
+                          <widget class="QPushButton" name="setupTracers">
+                           <property name="sizePolicy">
+                            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                             <horstretch>0</horstretch>
+                             <verstretch>0</verstretch>
+                            </sizepolicy>
                            </property>
-                           <property name="sizeHint" stdset="0">
-                            <size>
-                             <width>0</width>
-                             <height>0</height>
-                            </size>
+                           <property name="toolTip">
+                            <string>Click to specify used Xenobiotics or tracers for the metabolisation study</string>
                            </property>
-                          </spacer>
-                         </item>
-                         <item row="2" column="0" colspan="3">
-                          <widget class="QLabel" name="tracerExperimentLabel">
                            <property name="text">
-                            <string>No tracers configured</string>
+                            <string>Tracer setup</string>
                            </property>
                           </widget>
                          </item>
                          <item row="1" column="0" colspan="3">
-                          <spacer name="verticalSpacer_26">
-                           <property name="orientation">
-                            <enum>Qt::Vertical</enum>
-                           </property>
-                           <property name="sizeType">
-                            <enum>QSizePolicy::Fixed</enum>
-                           </property>
-                           <property name="sizeHint" stdset="0">
-                            <size>
-                             <width>0</width>
-                             <height>5</height>
-                            </size>
-                           </property>
-                          </spacer>
+                          <layout class="QHBoxLayout" name="horizontalLayout_31">
+                           <item>
+                            <spacer name="horizontalSpacer_34">
+                             <property name="orientation">
+                              <enum>Qt::Horizontal</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                              <size>
+                               <width>0</width>
+                               <height>0</height>
+                              </size>
+                             </property>
+                            </spacer>
+                           </item>
+                           <item>
+                            <widget class="QPushButton" name="CPEditOpen">
+                             <property name="text">
+                              <string>Custom pattern configuration</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <spacer name="horizontalSpacer_35">
+                             <property name="orientation">
+                              <enum>Qt::Horizontal</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                              <size>
+                               <width>0</width>
+                               <height>0</height>
+                              </size>
+                             </property>
+                            </spacer>
+                           </item>
+                          </layout>
                          </item>
                         </layout>
                        </item>
@@ -2811,6 +2832,26 @@ p, li { white-space: pre-wrap; }
                  <enum>Qt::Horizontal</enum>
                 </property>
                </widget>
+              </item>
+              <item row="1" column="0" colspan="2">
+               <widget class="Line" name="line_4">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0" rowspan="3" colspan="2">
+               <spacer name="verticalSpacer_28">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>80</height>
+                 </size>
+                </property>
+               </spacer>
               </item>
               <item row="8" column="0" colspan="2">
                <widget class="QFrame" name="frame_bracketResults">
@@ -3183,46 +3224,6 @@ font: 7pt;</string>
                 </layout>
                </widget>
               </item>
-              <item row="1" column="0" colspan="2">
-               <widget class="Line" name="line_4">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="0" rowspan="3" colspan="2">
-               <spacer name="verticalSpacer_28">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>80</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="0" column="0" colspan="2">
-               <widget class="QCheckBox" name="processIndividualFiles">
-                <property name="toolTip">
-                 <string>If checked, MetExtract will search for features in the input files </string>
-                </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">font: 30pt &quot;Calibri&quot;;
-</string>
-                </property>
-                <property name="text">
-                 <string>1st step: Individual files processing</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
               <item row="3" column="1">
                <widget class="QFrame" name="procIndFiles">
                 <property name="sizePolicy">
@@ -3251,6 +3252,26 @@ font: 7pt;</string>
                   <number>0</number>
                  </property>
                 </layout>
+               </widget>
+              </item>
+              <item row="0" column="0" colspan="2">
+               <widget class="QCheckBox" name="processIndividualFiles">
+                <property name="toolTip">
+                 <string>If checked, MetExtract will search for features in the input files </string>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">font: 30pt &quot;Calibri&quot;;
+</string>
+                </property>
+                <property name="text">
+                 <string>1st step: Individual files processing</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
                </widget>
               </item>
               <item row="12" column="0" colspan="2">
@@ -3284,6 +3305,13 @@ font: 7pt;</string>
                 </property>
                </widget>
               </item>
+              <item row="18" column="0" colspan="2">
+               <widget class="Line" name="line_38">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
               <item row="15" column="0" rowspan="2" colspan="2">
                <spacer name="verticalSpacer_29">
                 <property name="orientation">
@@ -3296,13 +3324,6 @@ font: 7pt;</string>
                  </size>
                 </property>
                </spacer>
-              </item>
-              <item row="18" column="0" colspan="2">
-               <widget class="Line" name="line_38">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
               </item>
               <item row="19" column="0" colspan="2">
                <widget class="QFrame" name="frame_generateMSMSTargetLists">
@@ -3619,13 +3640,6 @@ font: 7pt;</string>
                 </layout>
                </widget>
               </item>
-              <item row="13" column="0" colspan="2">
-               <widget class="Line" name="line_16">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
               <item row="17" column="0" colspan="2">
                <widget class="QCheckBox" name="generateMSMSInfo_CheckBox">
                 <property name="styleSheet">
@@ -3634,6 +3648,13 @@ font: 7pt;</string>
                 </property>
                 <property name="text">
                  <string>4th step: Generate MSMS target lists</string>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="0" colspan="2">
+               <widget class="Line" name="line_16">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
                 </property>
                </widget>
               </item>
@@ -4026,6 +4047,22 @@ font: 7pt;</string>
                  </item>
                 </layout>
                </widget>
+              </item>
+              <item row="3" column="0">
+               <spacer name="verticalSpacer_19">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Fixed</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>80</height>
+                 </size>
+                </property>
+               </spacer>
               </item>
              </layout>
             </item>
@@ -4898,7 +4935,7 @@ font: 7pt;</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1592</width>
+             <width>1922</width>
              <height>1262</height>
             </rect>
            </property>

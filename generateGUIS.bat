@@ -7,6 +7,7 @@ CALL c:\Python27\Lib\site-packages\PyQt4\pyuic4.bat -x .\mePyGuis\guis\heteroAto
 CALL c:\Python27\Lib\site-packages\PyQt4\pyuic4.bat -x .\mePyGuis\guis\TSVLoaderEditor.ui             -o .\offTopic\TSVLoaderEditor.py
 CALL c:\Python27\Lib\site-packages\PyQt4\pyuic4.bat -x .\mePyGuis\guis\ModuleSelectionWindow.ui       -o .\mePyGuis\ModuleSelectionWindow.py
 CALL c:\Python27\Lib\site-packages\PyQt4\pyuic4.bat -x .\mePyGuis\guis\calcIsotopeEnrichmentDialog.ui -o .\mePyGuis\calcIsotopeEnrichmentDialog.py
+CALL c:\Python27\Lib\site-packages\PyQt4\pyuic4.bat -x .\mePyGuis\guis\TextEditDialog.ui              -o .\mePyGuis\TextEditorGUI.py
 
 CALL c:\Python27\Lib\site-packages\PyQt4\pyuic4.bat -x .\mePyGuis\guis\FE_mainWindow.ui               -o .\mePyGuis\FE_mainWindow.py
 

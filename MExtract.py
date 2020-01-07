@@ -5004,6 +5004,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.ui.groupBox_ISOB.setVisible(False)
             self.ui.useCValidation.setVisible(False)
 
+            self.ui.CPEditOpen.setVisible(False)
+
             self.ui.useRatio.setVisible(False)
 
         elif val==METABOLOME:
@@ -5015,6 +5017,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.ui.groupBox_ISOA.setVisible(True)
             self.ui.groupBox_ISOB.setVisible(True)
             self.ui.useCValidation.setVisible(True)
+
+            self.ui.CPEditOpen.setVisible(False)
 
             self.ui.useRatio.setVisible(True)
 
@@ -5028,6 +5032,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.ui.groupBox_ISOB.setVisible(False)
             self.ui.useCValidation.setVisible(False)
 
+            self.ui.CPEditOpen.setVisible(True)
+
             self.ui.useRatio.setVisible(False)
 
             self.ui.numberOfAtomsBox.setVisible(False)
@@ -5038,10 +5044,21 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         tracerDialog = tracerEdit()
         tracerDialog.setTracer(deepcopy(self.configuredTracer))
         if tracerDialog.executeDialog() == QtGui.QDialog.Accepted:
-
             self.configuredTracer = tracerDialog.getTracer()
 
         self.updateTracerInfo()
+
+    def showCPEditor(self):
+        try:
+            from mePyGuis.TextEditor import TextEditor
+            w=TextEditor()
+            if w.exec_():
+                print w.getText()
+
+        except:
+            import traceback
+            traceback.print_exc()
+            logging.error(str(traceback))
 
     def updateTracerInfo(self):
         if self.configuredTracer == None:
@@ -5372,6 +5389,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.updateTracerInfo()
         self.ui.setupTracers.clicked.connect(self.showTracerEditor)
 
+        self.ui.CPEditOpen.clicked.connect(self.showCPEditor)
+
         self.ui.processMultipleFiles.toggled.connect(self.processMultipleFilesChanged)
         self.ui.saveMZXML.toggled.connect(self.saveMZXMLChanged)
         self.updateIndividualFileProcessing = True
@@ -5430,8 +5449,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.plotAddLabels.stateChanged.connect(self.selectedResChanged)
         self.ui.plotMarkArea.stateChanged.connect(self.selectedResChanged)
         self.ui.scaleFeatures.stateChanged.connect(self.selectedResChanged)
-        self.ui.scaleLabelledFeatures.stateChanged.connect(self.selectedResChanged)
-        self.ui.showIsotopologues.stateChanged.connect(self.selectedResChanged)
         self.ui.showArtificialShoft_checkBox.stateChanged.connect(self.selectedResChanged)
         self.ui.showSmoothedEIC_checkBox.stateChanged.connect(self.selectedResChanged)
         self.ui.flattenXIC.stateChanged.connect(self.selectedResChanged)
@@ -5465,7 +5482,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.addmzVaultRep_pushButton.clicked.connect(self.addMZVaultRepository)
         self.ui.removeDB_pushButton.clicked.connect(self.removeDB)
         self.ui.generateDBTemplate_pushButton.clicked.connect(self.generateDBTemplate)
-
 
 
 
