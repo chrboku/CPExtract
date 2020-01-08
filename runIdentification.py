@@ -135,7 +135,7 @@ class RunIdentification:
                  eicSmoothingWindow="None", eicSmoothingWindowSize=0, eicSmoothingPolynom=0, artificialMPshift_start=0, artificialMPshift_stop=0,
                  correctCCount=True, minCorrelation=0.85, minCorrelationConnections=0.4, hAIntensityError=5., hAMinScans=3, adducts=[],
                  elements=[], heteroAtoms=[], simplifyInSourceFragments=True, chromPeakFile=None, lock=None, queue=None, pID=-1, rVersion="NA",
-                 meVersion="NA"):
+                 meVersion="NA", rules=[]):
 
         self.labellingIsotopeA=labellingisotopeA
         self.labellingIsotopeB=labellingisotopeB
@@ -258,6 +258,9 @@ class RunIdentification:
         for heteroAtom in heteroAtoms:
             self.heteroAtoms[heteroAtom.name] = heteroAtom
         self.simplifyInSourceFragments=simplifyInSourceFragments
+
+        #Rules
+        self.rules=rules
 
         #System
         self.lock = lock
@@ -1004,7 +1007,7 @@ class RunIdentification:
                         if ionMode == '-':
                             doneBins += len(mzbins['+'])
 
-                        reportFunction(1. * doneBins / totalBins, "%d/%d mzbins done (%d features found so far)" % (doneBins, totalBins, len(chromPeaks)))
+                        reportFunction(1. * doneBins / totalBins, "%d/%d mzbins done / %d features found so far" % (doneBins, totalBins, len(chromPeaks)))
 
                     kids = mzbin.getKids()
                     if len(kids) < self.minSpectraCount:
@@ -1431,7 +1434,7 @@ class RunIdentification:
         configTracers = {}
 
         cols=OrderedDict([("Num",     "id"),
-                          ("OGroup",  "fGroupID"),
+                          #("OGroup",  "fGroupID"),
                           ("MZ",      "mz"),
                           ("RT",      "PeakCenterMin"),
                           ("Label",   "similarityString"),
@@ -2168,23 +2171,6 @@ class RunIdentification:
 
 
 
-            rules = [
-                PresenceRule(otherIsotopolog="[13C]-2",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.01, 3]}),
-                PresenceRule(otherIsotopolog="[13C]-4",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.01, 3]}),
-                PresenceRule(otherIsotopolog="[13C]-6",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.01, 3]}),
-                PresenceRule(otherIsotopolog="[13C]-8",  minIntensity=self.intensityThreshold, mustBePresent=True,  verifyChromPeakSimilarity=True,  ratioWindows={"X": [0.01, 3]}),
-
-                PresenceRule(otherIsotopolog="[13C]-10", minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.0, 10]}),
-                PresenceRule(otherIsotopolog="[13C]-12", minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.0, 10]}),
-                PresenceRule(otherIsotopolog="[13C]-1",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-2": [0.01, 3]}),
-                PresenceRule(otherIsotopolog="[13C]-3",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-4": [0.01, 3]}),
-                PresenceRule(otherIsotopolog="[13C]-5",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-6": [0.01, 3]}),
-                PresenceRule(otherIsotopolog="[13C]-7",  minIntensity=self.intensityThreshold, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-8": [0.01, 3]}),
-
-                 AbsenceRule(otherIsotopolog="[13C]1",   maxRatio=0.01)
-            ]
-
-
 
 
             # region 1. Find 12C 13C partners in the mz dimension (0-25%)
@@ -2197,7 +2183,7 @@ class RunIdentification:
                 self.postMessageToProgressWrapper("value",0.25 * curVal)
                 self.postMessageToProgressWrapper("text", "Extracting signal pairs (%s)" % (text))
 
-            mzs, negFound, posFound = self.findSignalPairs(mzxml, self.configuredTracer, rules, reportFunction)
+            mzs, negFound, posFound = self.findSignalPairs(mzxml, self.configuredTracer, self.rules, reportFunction)
             self.writeSignalPairsToDB(mzs, mzxml)
 
             self.printMessage("Extracting signal pairs done. pos: %d neg: %d mzs (including mismatches)" % (posFound, negFound), type="info")

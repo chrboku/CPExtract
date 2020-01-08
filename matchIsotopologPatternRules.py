@@ -7,7 +7,7 @@ _formulaTools=formulaTools()
 
 class Rule:
     def getAllRequiredIsotopologs(self):
-        return {}
+        return []
 
     def check(self, isotopologDict, log=False):
         return False

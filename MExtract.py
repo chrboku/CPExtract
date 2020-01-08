@@ -237,6 +237,8 @@ from optparse import OptionParser
 import csv
 import math
 
+from matchIsotopologPatternRules import *
+
 
 #</editor-fold>
 #<editor-fold desc="### PyQT 4 Imports">
@@ -2746,6 +2748,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             # start the multiprocessing
             res = p.imap_unordered(runFile, [
                 RunIdentification(files[i],
+                                  rules=self.rules,
                                   exOperator=str(self.ui.exOperator_LineEdit.text()),
                                   exExperimentID=str(self.ui.exExperimentID_LineEdit.text()),
                                   exComments=str(self.ui.exComments_TextEdit.toPlainText()),
@@ -3108,6 +3111,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     shutil.copyfile(resFilePath + "/xxx_results__3_afterOmit.tsv.identified.sqlite", resFileFull + ".identified.sqlite")
 
                     runIdentificationInstance=RunIdentification(files[0],
+                                                                rules=self.rules,
                                                                 exOperator=str(self.ui.exOperator_LineEdit.text()),
                                                                 exExperimentID=str(self.ui.exExperimentID_LineEdit.text()),
                                                                 exComments=str(self.ui.exComments_TextEdit.toPlainText()),
@@ -5051,9 +5055,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
     def showCPEditor(self):
         try:
             from mePyGuis.TextEditor import TextEditor
-            w=TextEditor()
+            w=TextEditor(labelText="Enter Python code for the RuleMatcher\n(see documentation for options)", text=self.rulesString, textChangeCallback=self.generateRulesFromText)
             if w.exec_():
-                print w.getText()
+                self.rulesString = str(w.getText())
+                a = self.generateRulesFromText(self.rulesString)
+                if a[0]:
+                    self.rules = a[1]
+                    logging.info(w.getText())
+                    logging.info("New rules (above) will be used")
 
         except:
             import traceback
@@ -5256,6 +5265,33 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 dbt.write("## Additional columns may be provided. These will be transfered to the results but not checked in any way")
 
 
+
+
+
+
+    def generateRulesFromText(self, text):
+
+        try:
+            if "rules" in locals():
+                del rules
+
+            exec(text)
+
+            if "rules" not in locals():
+                return (False, "Variable rules does not exist in the text")
+            if not isinstance(rules, list):
+                return (False, "Variable rules is not a list")
+            for rule in rules:
+                if not isinstance(rule, Rule):
+                    return (False, "All elements in rules must be a Rule object or an inherited object (e.g. PresenceRule, AbsenceRule)")
+
+            return (True, rules)
+        except Exception as ex:
+            return (False, "General error: %s"%ex.message)
+
+
+
+
     # initialise main interface, triggers and command line parameters
     def __init__(self, module="TracExtract", parent=None, silent=False):
         super(Ui_MainWindow, self).__init__()
@@ -5329,6 +5365,50 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         self.grpFile = None
         self.currentOpenResultsFile=None
+
+
+
+        ## load standard rules
+
+        self.rulesString=[
+            ' #####################################',
+            ' ## Generic ruleset',
+            ' ## ',
+            ' ## X is the isotopolog, from which the isotopolog patterns are checked. Negative isotopolog numbers can be used as well if the organism',
+            ' ## is uniformly 13C-labeled. These sample rules originate from a dataset of Bernhard Seidl (todo add reference here). ',
+            ' ##',
+            ' ## The rules must be saved in an array. All rules will then be applied sequentially during the search',
+            ' ## An error in the code will deactivate the dialogbox',
+            ' #####################################',
+            '',
+            'intThres=1E4',
+            '',
+            'rules = [ ' ,
+            '    ## Isotopologs that are verified as chromatographic peaks',
+            '    PresenceRule(otherIsotopolog="[13C]-2" , minIntensity=intThres, mustBePresent=True,  verifyChromPeakSimilarity=True, ratioWindows={"X": [0.01, 3]}),',
+            '    PresenceRule(otherIsotopolog="[13C]-4" , minIntensity=intThres, mustBePresent=True,  verifyChromPeakSimilarity=True, ratioWindows={"X": [0.01, 3]}),',
+            '    PresenceRule(otherIsotopolog="[13C]-6" , minIntensity=intThres, mustBePresent=True,  verifyChromPeakSimilarity=True, ratioWindows={"X": [0.01, 3]}),',
+            '    PresenceRule(otherIsotopolog="[13C]-8" , minIntensity=intThres, mustBePresent=True,  verifyChromPeakSimilarity=True, ratioWindows={"X": [0.01, 3]}),',
+            '    ' ,
+            '    ## Isotopologs that can be present but are not required to be and thus are not checked as chromatographic peaks',
+            '    PresenceRule(otherIsotopolog="[13C]-10", minIntensity=intThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3]}),',
+            '    PresenceRule(otherIsotopolog="[13C]-12", minIntensity=intThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3]}),',
+            '    PresenceRule(otherIsotopolog="[13C]-1" , minIntensity=intThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-2": [0.01, 3]}),',
+            '    PresenceRule(otherIsotopolog="[13C]-3" , minIntensity=intThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-4": [0.01, 3]}),',
+            '    PresenceRule(otherIsotopolog="[13C]-5" , minIntensity=intThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-6": [0.01, 3]}),',
+            '    PresenceRule(otherIsotopolog="[13C]-7" , minIntensity=intThres, mustBePresent=False, verifyChromPeakSimilarity=False, ratioWindows={"X": [0.01, 3], "[13C]-8": [0.01, 3]}),' ,
+            '    ' ,
+            '    ## Signals, that must not be present',
+            '    AbsenceRule(otherIsotopolog="[13C]1", maxRatio=0.01)',
+            ']']
+        self.rulesString="\n".join(self.rulesString)
+        a=self.generateRulesFromText(self.rulesString)
+        self.rules=a[1]
+
+
+
+
+
 
 
 
