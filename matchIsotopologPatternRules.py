@@ -21,6 +21,7 @@ class Rule:
 
 
 
+
 class PresenceRule(Rule):
     def __init__(self, otherIsotopolog="[13C]2", minIntensity=10000, mustBePresent=True, verifyChromPeakSimilarity=True, ratioWindows={'X': [1/2., 2]}):
         self.otherIsotopolog=otherIsotopolog
@@ -128,12 +129,13 @@ class RuleMatcher:
                     isotopologDict[iso]=b
                     noNeedToCheckFurther.append(ind)
 
-        passedRules=True
+        rulesValid=True
         for rule in self.rules:
-            if passedRules:
-                passedRules=passedRules and rule.check(isotopologDict, log=self.log)
+            if rulesValid:
+                ruleValid=rule.check(isotopologDict, log=self.log)
+                rulesValid=rulesValid and ruleValid
 
-        return passedRules, noNeedToCheckFurther if passedRules else []
+        return rulesValid, noNeedToCheckFurther if rulesValid else []
 
     def getChromatographicPeaks(self):
         chromPeaks={}

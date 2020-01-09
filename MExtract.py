@@ -2168,7 +2168,15 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             if sett.contains("maxRatio") and self.labellingExperiment==METABOLOME:
                 self.ui.maxRatio.setValue(sett.value("maxRatio").toDouble()[0])
 
-            ## todo load CP parameters
+            if sett.contains("rulesString") and self.labellingExperiment==CUSTOMPATTERN:
+                self.rulesString=str(base64.b64decode(sett.value("rulesString").toString()))
+                a = self.generateRulesFromText(self.rulesString)
+                if a[0]:
+                    self.rules = a[1]
+                    logging.info(w.getText())
+                    logging.info("New rules (above) will be used")
+
+
 
             if sett.contains("IntensityThreshold"):
                 self.ui.intensityThreshold.setValue(sett.value("IntensityThreshold").toInt()[0])
@@ -2433,7 +2441,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 sett.setValue("minRatio", self.ui.minRatio.value())
                 sett.setValue("maxRatio", self.ui.maxRatio.value())
             if self.labellingExperiment==CUSTOMPATTERN:
-                pass # TODO save cp parameters
+                sett.setValue("rulesString", base64.b64encode(self.rulesString))
 
             sett.setValue("IntensityThreshold", self.ui.intensityThreshold.value())
             sett.setValue("IntensityCutoff", self.ui.intensityCutoff.value())
@@ -5374,11 +5382,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             ' #####################################',
             ' ## Generic ruleset',
             ' ## ',
-            ' ## X is the isotopolog, from which the isotopolog patterns are checked. Negative isotopolog numbers can be used as well if the organism',
-            ' ## is uniformly 13C-labeled. These sample rules originate from a dataset of Bernhard Seidl (todo add reference here). ',
+            ' ## X is the isotopolog from which the isotopolog patterns are checked. ',
+            ' ## Positive isotopolog definitions (e.g. [13C]1 define offsets (e.g. X+1.00335484)',
+            ' ## Negative isotopolog numbers can be used as well if the organism is uniformly 13C-labeled. ',
             ' ##',
-            ' ## The rules must be saved in an array. All rules will then be applied sequentially during the search',
-            ' ## An error in the code will deactivate the dialogbox',
+            ' ## The rules must be saved in an array. All rules will then be applied sequentially during the search. ',
+            ' ## An error in the code will deactivate the dialogbox. See documentation for further information',
+            ' ##',
+            ' ## These sample rules originate from a dataset of Bernhard Seidl (todo add reference here). ',
             ' #####################################',
             '',
             'intThres=1E4',
