@@ -101,6 +101,8 @@ def matchPartners(mzXMLData, rules,
 
     # substitution arrays for checking the number of carbon atoms
     maxSub=5
+    if len(xCounts)==0:
+        xCounts=[1,2,3]
     purityNArray = getSubstitutionArray(purityN, max(xCounts)+1, maxSub)   # native metabolite
     purityLArray = getSubstitutionArray(purityL, max(xCounts)+1, maxSub)   # labelled metabolite
 

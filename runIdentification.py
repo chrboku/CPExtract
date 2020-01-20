@@ -2265,7 +2265,7 @@ class RunIdentification:
 
             # W.3 Write resutls to PDF
             ##########################################################################################
-            if self.writePDF:
+            if False:
                 self.postMessageToProgressWrapper("text", "Writing results to PDF")
 
                 def reportFunction(curVal, text):

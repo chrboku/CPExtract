@@ -2173,7 +2173,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 a = self.generateRulesFromText(self.rulesString)
                 if a[0]:
                     self.rules = a[1]
-                    logging.info(w.getText())
+                    logging.info(self.rulesString)
                     logging.info("New rules (above) will be used")
 
 
@@ -2294,8 +2294,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 self.ui.wm_iap.setChecked(writeMZXMLOptions & 2)
                 self.ui.wm_imb.setChecked(writeMZXMLOptions & 4)
                 self.ui.wm_ib.setChecked(writeMZXMLOptions & 8)
-            if sett.contains("savePDF"):
-                self.ui.savePDF.setChecked(sett.value("savePDF").toBool())
+            #if sett.contains("savePDF"):
+            #    self.ui.savePDF.setChecked(sett.value("savePDF").toBool())
 
             if sett.contains("minCorrelation"):
                 self.ui.minCorrelation.setValue(sett.value("minCorrelation").toDouble()[0])
@@ -2499,7 +2499,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 writeMZXMLOptions |= 8
             sett.setValue("writeMZXMLOptions", writeMZXMLOptions)
 
-            sett.setValue("savePDF", self.ui.savePDF.checkState() == QtCore.Qt.Checked)
+            #sett.setValue("savePDF", self.ui.savePDF.checkState() == QtCore.Qt.Checked)
 
             sett.setValue("minCorrelation", self.ui.minCorrelation.value())
             sett.setValue("minCorrelationConnections", self.ui.minCorrelationConnections.value())
@@ -5758,6 +5758,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.wavelet_SNRThreshold.setVisible(False)
         self.ui.scaleError.setVisible(False)
         self.ui.peak_scaleError.setVisible(False)
+
+        self.ui.savePDF.setVisible(False)
+        self.ui.saveMZXML.setVisible(False)
 
         #todo: implement results view with all brackated feature pairs
         self.ui.tabWidget.setTabText(3, "EXPERIMENTAL: "+self.ui.tabWidget.tabText(3))
