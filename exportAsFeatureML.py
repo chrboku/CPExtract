@@ -127,7 +127,7 @@ def convertMEMatrixToFeatureMLSepPolarities(meMatrixFile, featureMLFile=None, po
                 pass
             else:
                 b=Bunch(id=row[headers["Num"]], ogroup=row[headers["OGroup"]], mz=float(row[headers["MZ"]]), rt=float(row[headers["RT"]])*60, Xn=row[headers["Xn"]],
-                        charge=int(row[headers["Charge"]]), name=row[headers["Num"]], ionMode=row[headers["Ionisation_Mode"]])
+                        charge=int(row[headers["Charge"]]), name=row[headers["Num"]], ionMode=row[headers["IonMode"]])
                 features[b.ionMode].append(b)
 
     if len(features['-'])>0:

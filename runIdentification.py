@@ -1294,8 +1294,6 @@ class RunIdentification:
 
                         peaksInGroup[a].correlationsToOthers=temp
 
-                    #TODO self.annotateChromPeaks(group, peaksInGroup)# store feature pair annotation in the database
-
                     done=done+1
                     self.postMessageToProgressWrapper("text", "%s: Annotating feature groups (%d/%d done)" % (tracer.name, done, len(groups)))
 

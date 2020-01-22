@@ -146,7 +146,7 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
         with open(file, "wb") as f:
             # initialise TSV results file
 
-            f.write("Num\tComment\tMZ\tMZ_Range\tRT\tRT_Range\tPeakScales\tXn\tCharge\tScanEvent\tIonisation_Mode\tOGroup\tIon\tLoss\tM")
+            f.write("Num\tComment\tMZ\tMZ_Range\tRT\tRT_Range\tPeakScales\tXn\tCharge\tScanEvent\tIonMode\tOGroup\tIon\tLoss\tM")
             for res in results:
                 f.write("\t" + res.fileName + "_Area")
 
@@ -429,7 +429,7 @@ def bracketResults(indGroups, xCounts, groupSizePPM, positiveScanEvent=None, neg
 
                                                         f.write("\t".join([str(a) for a in [curNum, "", avgmz, "%f - %f"%(min(groupedChromPeaksAVGMz[i]), max(groupedChromPeaksAVGMz[i])),
                                                                                             avgtime , "%.2f - %.2f"%(min(groupedChromPeaksAVGTimes[i]), max(groupedChromPeaksAVGTimes[i])),
-                                                                                            avgPeakScale, xCount, cLoading, scanEvent, ionMode, "",
+                                                                                            avgPeakScale, xCount, cLoading, scanEvent, ionMode,
                                                                                             "", "", "", ""]]))
 
                                                         SQLInsert(resDB.curs, "GroupResults", id=curNum, OGroup=curNum, mz=avgmz, rt=avgtime, similarityString=xCount, charge=cLoading, ionisationMode=ionMode, scanEvent=scanEvent)
@@ -671,14 +671,14 @@ def calculateMetaboliteGroups(file="./results.tsv", groups=[], eicPPM=10., maxAn
                 if fShort[0].isdigit():
                     fShort="_"+fShort
 
-                assert "%s_FID"%fShort in cols
-                assert "%s_GroupID"%fShort in cols
+                #assert "%s_FID"%fShort in cols
+                #assert "%s_GroupID"%fShort in cols
 
 
         # fetch all feature pairs from the results file
         nodes={}
-        for fpNum, mz, lmz, rt, xn, charge, scanEvent, ionMode in table.getData(cols=["Num", "MZ", "L_MZ", "RT", "Xn", "Charge", "ScanEvent", "Ionisation_Mode"]):
-            nodes[fpNum]=Bunch(fpNum=fpNum, mz=mz, lmz=lmz, rt=rt, xn=xn, charge=charge, scanEvent=scanEvent, ionMode=ionMode, oGroup=None, correlationToOtherFPs={})
+        for fpNum, mz, rt, charge, scanEvent, ionMode in table.getData(cols=["Num", "MZ", "RT", "Charge", "ScanEvent", "IonMode"]):
+            nodes[fpNum]=Bunch(fpNum=fpNum, mz=mz, rt=rt, charge=charge, scanEvent=scanEvent, ionMode=ionMode, oGroup=None, correlationToOtherFPs={})
 
 
         ## generate all correlations and sil ratios
@@ -686,12 +686,12 @@ def calculateMetaboliteGroups(file="./results.tsv", groups=[], eicPPM=10., maxAn
         fileSILRatios = {}
 
         borders={}
-        for row in resDB.curs.execute("SELECT NBorderLeft, NBorderRight, LBorderLeft, LBorderRight, file, resID FROM foundfeaturepairs"):
-            fil=str(row[4])
-            resID=int(row[5])
+        for row in resDB.curs.execute("SELECT PeakScale, file, resID FROM foundfeaturepairs"):
+            fil=str(row[1])
+            resID=int(row[2])
             if fil not in borders.keys():
                 borders[fil]={}
-            borders[fil][resID]=(float(row[0]), float(row[1]), float(row[2]), float(row[3]))
+            borders[fil][resID]=float(row[0])
 
 
         ## Iterate all files
@@ -773,9 +773,10 @@ def calculateMetaboliteGroups(file="./results.tsv", groups=[], eicPPM=10., maxAn
                             if fi in fileCorrelations.keys() and fpNumA in fileCorrelations[fi].keys() and fpNumB in fileCorrelations[fi][fpNumA].keys():
                                 co = fileCorrelations[fi][fpNumA][fpNumB]
                                 allCorrelations.append(co)
-                            if fi in fileSILRatios.keys() and fpNumA in fileSILRatios[fi].keys() and fpNumB in fileSILRatios[fi][fpNumA].keys():
-                                silRatio = fileSILRatios[fi][fpNumA][fpNumB]
-                                allSILRatios.append(silRatio)
+                                allSILRatios.append(1)
+                            #if fi in fileSILRatios.keys() and fpNumA in fileSILRatios[fi].keys() and fpNumB in fileSILRatios[fi][fpNumA].keys():
+                            #    silRatio = fileSILRatios[fi][fpNumA][fpNumB]
+                            #    allSILRatios.append(silRatio)
 
                     if len(allCorrelations)>0 and len(allSILRatios)>0:
                         if sum([co>=minPeakCorrelation for co in allCorrelations])>=minConnectionRate*len(allCorrelations) and \
@@ -893,10 +894,9 @@ def calculateMetaboliteGroups(file="./results.tsv", groups=[], eicPPM=10., maxAn
         # Annotate groups with common adducts and in-source fragments
         if runIdentificationInstance is not None:
             groups=defaultdict(list)
-            for row in table.getData(cols=["Num", "OGroup", "MZ", "Ionisation_Mode", "Charge", "Ion", "Xn", "Loss", "M"]):
+            for row in table.getData(cols=["Num", "OGroup", "MZ", "IonMode", "Charge", "Ion", "Loss", "M"]):
                 num, ogrp, mz, ionMode, loading, adducts, xCount, fDesc, ms=row
-                groups[ogrp].append(ChromPeakFeature(id=num, fGroupID=ogrp, mz=mz, ionMode=ionMode, loading=loading, adducts=[], heteroAtomsFeaturePairs=[],
-                                                     xCount=xCount, fDesc=[]))
+                groups[ogrp].append(ChromPeakFeature(id=num, fGroupID=ogrp, mz=mz, ionMode=ionMode, loading=loading, adducts=[], heteroAtomsFeaturePairs=[], fDesc=[]))
 
             for ogrp in groups.keys():
                 chromPeaks={}
@@ -1012,8 +1012,6 @@ class ConvoluteFPsInFile:
                         rb=borders[fiName][nodeB.fpNum]
 
                     if ra != None and rb != None:
-                        nanbl, nanbr, nalbl, nalbr = ra
-                        nbnbl, nbnbr, nblbl, nblbr = rb
 
                         if nodeA.scanEvent in mzXML.getFilterLines(includeMS1=True, includeMS2=False,
                                                                    includePosPolarity=True, includeNegPolarity=True) and \
@@ -1023,11 +1021,11 @@ class ConvoluteFPsInFile:
 
                             meanRT = mean([nodeA.rt, nodeB.rt])
 
-                            eicAL, timesA, scanIdsA, mzs = mzXML.getEIC(nodeA.lmz, ppm=eicPPM, filterLine=nodeA.scanEvent,
+                            eicAL, timesA, scanIdsA, mzs = mzXML.getEIC(nodeA.mz, ppm=eicPPM, filterLine=nodeA.scanEvent,
                                                                       removeSingles=True, intThreshold=0, useMS1=True,
                                                                       useMS2=False, startTime=meanRT * 60 - 120,
                                                                       endTime=meanRT * 60 + 120)
-                            eicBL, timesB, scanIdsB, mzs = mzXML.getEIC(nodeB.lmz, ppm=eicPPM, filterLine=nodeB.scanEvent,
+                            eicBL, timesB, scanIdsB, mzs = mzXML.getEIC(nodeB.mz, ppm=eicPPM, filterLine=nodeB.scanEvent,
                                                                       removeSingles=True, intThreshold=0, useMS1=True,
                                                                       useMS2=False, startTime=meanRT * 60 - 120,
                                                                       endTime=meanRT * 60 + 120)
@@ -1059,7 +1057,7 @@ class ConvoluteFPsInFile:
 
                             ## A) Test correlation of different feature pairs
                             try:
-                                lI, rI = getPeak(timesMin, meanRT, min(nanbl, nbnbl)*2, min(nanbr, nbnbr)*2)
+                                lI, rI = getPeak(timesMin, meanRT, min(ra, rb)*2, min(ra, rb)*2)
 
                                 eicAC = eicAL[lI:rI]
                                 eicBC = eicBL[lI:rI]
@@ -1075,7 +1073,7 @@ class ConvoluteFPsInFile:
 
                             ## B) Test similarity of native:labeled ratio
                             try:
-                                lISIL, rISIL = getPeak(timesMin, nodeA.rt, min(nanbl, nanbr) * .8, min(nalbl, nalbr) * .8)
+                                lISIL, rISIL = getPeak(timesMin, nodeA.rt, min(ra, ra) * .8, min(ra, ra) * .8)
 
                                 eicANCSIL = eicA[lISIL:rISIL]
                                 eicALCSIL = eicAL[lISIL:rISIL]
@@ -1084,7 +1082,7 @@ class ConvoluteFPsInFile:
                                 ma = mean(folds)
                                 sa = sd(folds)
 
-                                lISIL, rISIL = getPeak(timesMin, nodeB.rt, min(nanbl, nanbr) * .8, min(nalbl, nalbr) * .8)
+                                lISIL, rISIL = getPeak(timesMin, nodeB.rt, min(ra, ra) * .8, min(ra, ra) * .8)
 
                                 eicBNCSIL = eicB[lISIL:rISIL]
                                 eicBLCSIL = eicBL[lISIL:rISIL]
