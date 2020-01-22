@@ -895,7 +895,7 @@ def calculateMetaboliteGroups(file="./results.tsv", groups=[], eicPPM=10., maxAn
         if runIdentificationInstance is not None:
             groups=defaultdict(list)
             for row in table.getData(cols=["Num", "OGroup", "MZ", "IonMode", "Charge", "Ion", "Loss", "M"]):
-                num, ogrp, mz, ionMode, loading, adducts, xCount, fDesc, ms=row
+                num, ogrp, mz, ionMode, loading, adducts, fDesc, ms=row
                 groups[ogrp].append(ChromPeakFeature(id=num, fGroupID=ogrp, mz=mz, ionMode=ionMode, loading=loading, adducts=[], heteroAtomsFeaturePairs=[], fDesc=[]))
 
             for ogrp in groups.keys():

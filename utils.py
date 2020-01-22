@@ -443,6 +443,7 @@ class ChromPeakFeature:
                  PeakCenter=-1, PeakCenterMin=-1, PeakScale=-1, SNR=-1, PeakArea=-1, PeakAbundance=-1,
                  heteroIsotoplogs={}, assignedMZs=[], comments=[],
                  artificialEICLShift=0, foundMatches=None,
+                 adducts=None, heteroAtomsFeaturePairs=None, fDesc=None,
                  file=None):
 
         self.id = id
@@ -471,6 +472,17 @@ class ChromPeakFeature:
         if foundMatches == None:
             foundMatches = []
         self.foundMatches=foundMatches
+
+        if adducts is None:
+            adducts=[]
+        self.adducts=adducts
+        if heteroAtomsFeaturePairs is None:
+            heteroAtomsFeaturePairs=[]
+        self.heteroAtomsFeaturePairs=heteroAtomsFeaturePairs
+        if fDesc is None:
+            fDesc=[]
+        self.fDesc=fDesc
+
 
         self.file=file
 

@@ -477,7 +477,7 @@ class procAreaInFile:
         return None
 
     # re-integrate one detected feature pair
-    def processArea(self, oldData, colToProc, colmz, colrt, colLmz, colIonMode, positiveScanEvent, negativeScanEvent,
+    def processArea(self, oldData, colToProc, colmz, colrt, colIonMode, positiveScanEvent, negativeScanEvent,
                     ppm, maxRTShift, scales, snrTH, smoothingWindow, smoothingWindowSize, smoothingWindowPolynom):
 
         scanEvent = ""
@@ -491,44 +491,24 @@ class procAreaInFile:
 
         r = None
         try:
-            r = self.processAreaFor(oldData[self.colInd[colToProc + "_Area_N"]], oldData[self.colInd[colmz]],
+            r = self.processAreaFor(oldData[self.colInd[colToProc + "_Area"]], oldData[self.colInd[colmz]],
                                     oldData[self.colInd[colrt]], ppm, scanEvent, maxRTShift, scales, snrTH, smoothingWindow, smoothingWindowSize, smoothingWindowPolynom)
         except Exception as exc:
-            logging.error("   - Reintegration failed for feature pair (N) %s (%s %s) [%s]" % (self.forFile, oldData[self.colInd[colmz]], oldData[self.colInd[colrt]], exc.message))
+            logging.error("   - Reintegration failed for feature  %s (%s %s) [%s]" % (self.forFile, oldData[self.colInd[colmz]], oldData[self.colInd[colrt]], exc.message))
 
         nFound = False
         if r is not None:
             area, abundance = r
-            oldData[self.colInd[colToProc + "_Area_N"]] = area
-            oldData[self.colInd[colToProc + "_Abundance_N"]] = abundance
+            oldData[self.colInd[colToProc + "_Area"]] = area
 
             nFound = True
-
-        r = None
-        try:
-            r = self.processAreaFor(oldData[self.colInd[colToProc + "_Area_L"]], oldData[self.colInd[colLmz]],
-                                    oldData[self.colInd[colrt]], ppm, scanEvent, maxRTShift, scales, snrTH, smoothingWindow, smoothingWindowSize, smoothingWindowPolynom)
-        except Exception as exc:
-            logging.error("   Reintegration failed for feature pair (L) %s (%s %s) [%s]" % (self.forFile, oldData[self.colInd[colmz]], oldData[self.colInd[colrt]], exc.message))
-
-        lFound = False
-        if r is not None:
-            area, abundance = r
-            oldData[self.colInd[colToProc + "_Area_L"]] = area
-            oldData[self.colInd[colToProc + "_Abundance_L"]] = abundance
-
-            lFound = True
-
-        if nFound and lFound:
-            oldData[self.colInd[colToProc + "_fold"]] = oldData[self.colInd[colToProc + "_Area_N"]] / oldData[self.colInd[colToProc + "_Area_L"]]
-
 
         self.done += 1
 
         return oldData
 
     # re-integrate all detected feature pairs in a given LC-HRMS data file
-    def processFile(self, oldData, colToProc, colmz, colrt, colLmz, colIonMode, positiveScanEvent, negativeScanEvent,
+    def processFile(self, oldData, colToProc, colmz, colrt, colIonMode, positiveScanEvent, negativeScanEvent,
                     ppm, maxRTShift, scales, snrTH, smoothingWindow, smoothingWindowSize, smoothingWindowPolynom):
         startProc=time.time()
         logging.info("   Reintegration started for file %s" % self.forFile)
@@ -545,7 +525,7 @@ class procAreaInFile:
             nDat = [copy(d) for d in oDat]
             try:
                 if (nDat[self.colInd[colIonMode]]=="+" and positiveScanEvent in scanEventsPerPolarity["+"]) or (nDat[self.colInd[colIonMode]]=="-" and negativeScanEvent in scanEventsPerPolarity["-"]):
-                    nDat = self.processArea(nDat, colToProc, colmz, colrt, colLmz, colIonMode, positiveScanEvent,
+                    nDat = self.processArea(nDat, colToProc, colmz, colrt, colIonMode, positiveScanEvent,
                                             negativeScanEvent, ppm, maxRTShift, scales, snrTH, smoothingWindow, smoothingWindowSize, smoothingWindowPolynom)
             except Exception as ex:
                 import traceback
@@ -558,7 +538,7 @@ class procAreaInFile:
         logging.info("   Reintegration finished for file %s (%.1f minutes)" % (self.forFile, (time.time()-startProc)/60.))
 
     # set re-integration parameters for the current sub-process
-    def setParams(self, oldDataFile, headers, colToProc, colmz, colrt, colxcount, colloading, colLmz, colIonMode,
+    def setParams(self, oldDataFile, headers, colToProc, colmz, colrt, colloading, colIonMode,
                   positiveScanEvent, negativeScanEvent, colnum, ppm, maxRTShift, scales, reintegrateIntensityCutoff, snrTH,
                   smoothingWindow, smoothingWindowSize, smoothingWindowPolynom):
         self.oldDataFile = oldDataFile
@@ -571,9 +551,7 @@ class procAreaInFile:
         self.colToProc = colToProc
         self.colmz = colmz
         self.colrt = colrt
-        self.colxcount = colxcount
         self.colloading = colloading
-        self.colLmz = colLmz
         self.colIonMode = colIonMode
         self.positiveScanEvent = positiveScanEvent
         self.negativeScanEvent = negativeScanEvent
@@ -623,7 +601,7 @@ class procAreaInFile:
             self.CP=GradientPeaks(minInt=1000,minIntFlanks=100,minIncreaseRatio=.5,minDelta=100,expTime=[5,150])   ##Lin
 
         # re-integrate all detected feature pairs from the grouped results in this LC-HRMS data file
-        self.processFile(self.oldData, self.colToProc, self.colmz, self.colrt, self.colLmz, self.colIonMode,
+        self.processFile(self.oldData, self.colToProc, self.colmz, self.colrt, self.colIonMode,
                          self.positiveScanEvent, self.negativeScanEvent, self.ppm, self.maxRTShift, self.scales,
                          self.snrTH, self.smoothingWindow, self.smoothingWindowSize, self.smoothingWindowPolynom)
 
@@ -641,30 +619,11 @@ class procAreaInFile:
     # re-integrated data needs to be matched to the correct columns in the grouped results
     def matchIntegratedDataToTable(self, oldData):
         newData={}
-        if oldData[self.colToProc + "_Area_N"] == "":
+        if oldData[self.colToProc + "_Area"] == "":
             for r in self.newData:
                 if r[self.colInd[self.colnum]] == oldData[self.colnum]:
-                    newData[self.colToProc + "_Area_N"] = r[self.colInd[self.colToProc + "_Area_N"]]
+                    newData[self.colToProc + "_Area"] = r[self.colInd[self.colToProc + "_Area"]]
 
-        if oldData[self.colToProc + "_Area_L"] == "":
-            for r in self.newData:
-                if r[self.colInd[self.colnum]] == oldData[self.colnum]:
-                    newData[self.colToProc + "_Area_L"] = r[self.colInd[self.colToProc + "_Area_L"]]
-
-        if oldData[self.colToProc + "_Abundance_N"] == "":
-            for r in self.newData:
-                if r[self.colInd[self.colnum]] == oldData[self.colnum]:
-                    newData[self.colToProc + "_Abundance_N"] = r[self.colInd[self.colToProc + "_Abundance_N"]]
-
-        if oldData[self.colToProc + "_Abundance_L"] == "":
-            for r in self.newData:
-                if r[self.colInd[self.colnum]] == oldData[self.colnum]:
-                    newData[self.colToProc + "_Abundance_L"] = r[self.colInd[self.colToProc + "_Abundance_L"]]
-
-        if oldData[self.colToProc + "_fold"] == "":
-            for r in self.newData:
-                if r[self.colInd[self.colnum]] == oldData[self.colnum]:
-                    newData[self.colToProc + "_fold"] = r[self.colInd[self.colToProc + "_fold"]]
         return newData
 
 # helper method for the multiprocessing package
@@ -685,7 +644,7 @@ def interruptReIntegrateFilesProcessing(pool, selfObj):
     else:
         return False # don't close progresswrapper and continue processing files
 
-def integrateResultsFile(file, toF, colToProc, colmz, colrt, colxcount, colloading, colLmz, colIonMode, colnum,
+def integrateResultsFile(file, toF, colToProc, colmz, colrt, colloading, colIonMode, colnum,
                           ppm=5., maxRTShift=0.25, scales=[3,19], reintegrateIntensityCutoff=0, snrTH=1, smoothingWindow=None, smoothingWindowSize=0, smoothingWindowPolynom=0,
                           positiveScanEvent="None", negativeScanEvent="None", pw=None, selfObj=None, cpus=1, start=0):
 
@@ -709,7 +668,7 @@ def integrateResultsFile(file, toF, colToProc, colmz, colrt, colxcount, colloadi
         #     writeConfig=False
 
     if len(colToProcCur)>0:
-        _integrateResultsFile(file, toF, colToProcCur, colmz, colrt, colxcount, colloading, colLmz, colIonMode, colnum,
+        _integrateResultsFile(file, toF, colToProcCur, colmz, colrt, colloading, colIonMode, colnum,
                               ppm, maxRTShift, scales, reintegrateIntensityCutoff, snrTH, smoothingWindow, smoothingWindowSize, smoothingWindowPolynom,
                               positiveScanEvent, negativeScanEvent, pw, selfObj, cpus, pwOffset=pwOffset, totalFilesToProc=len(colToProc),
                               writeConfig=writeConfig, start=start)
@@ -728,7 +687,7 @@ def writeReintegrateConfigToDB(curs, maxRTShift, negativeScanEvent, positiveScan
     SQLInsert(curs, "config", key="FPREINT_negativeScanEvent", value=str(negativeScanEvent))
 
 
-def _integrateResultsFile(file, toF, colToProc, colmz, colrt, colxcount, colloading, colLmz, colIonMode, colnum,
+def _integrateResultsFile(file, toF, colToProc, colmz, colrt, colloading, colIonMode, colnum,
                          ppm=5.,maxRTShift=0.25, scales=[3, 19], reintegrateIntensityCutoff=0, snrTH=1, smoothingWindow=None, smoothingWindowSize=0, smoothingWindowPolynom=0,
                          positiveScanEvent="None", negativeScanEvent="None",pw=None, selfObj=None, cpus=1, pwOffset=0,totalFilesToProc=1,
                          writeConfig=True, start=0):
@@ -755,18 +714,8 @@ def _integrateResultsFile(file, toF, colToProc, colmz, colrt, colxcount, colload
         if str.isdigit(col[0]):
             col = "_" + col
 
-        if col + "_Area_N" not in cols:
-            table.addColumn(col + "_Area_N", "FLOAT")
-        if col + "_Area_L" not in cols:
-            table.addColumn(col + "_Area_L", "FLOAT")
-
-        if col + "_Abundance_N" not in cols:
-            table.addColumn(col + "_Abundance_N", "FLOAT")
-        if col + "_Abundance_L" not in cols:
-            table.addColumn(col + "_Abundance_L", "FLOAT")
-
-        if col + "_fold" not in cols:
-            table.addColumn(col + "_fold", "FLOAT")
+        if col + "_Area" not in cols:
+            table.addColumn(col + "_Area", "FLOAT")
 
 
     TableUtils.saveFile(table, file+".tmp.tsv")
@@ -776,9 +725,7 @@ def _integrateResultsFile(file, toF, colToProc, colmz, colrt, colxcount, colload
 
     assert colmz in cols
     assert colrt in cols
-    assert colxcount in cols
     assert colloading in cols
-    assert colLmz in cols
     assert colIonMode in cols
     assert colnum in cols
 
@@ -800,8 +747,8 @@ def _integrateResultsFile(file, toF, colToProc, colmz, colrt, colxcount, colload
         if str.isdigit(s[0]):
             s = "_" + s
 
-        u.setParams(file+".tmp.tsv", [x.getName() for x in table.getColumns()], s, colmz, colrt, colxcount, colloading,
-                    colLmz, colIonMode, positiveScanEvent, negativeScanEvent, colnum, ppm, maxRTShift, scales, reintegrateIntensityCutoff, snrTH,
+        u.setParams(file+".tmp.tsv", [x.getName() for x in table.getColumns()], s, colmz, colrt, colloading,
+                    colIonMode, positiveScanEvent, negativeScanEvent, colnum, ppm, maxRTShift, scales, reintegrateIntensityCutoff, snrTH,
                     smoothingWindow, smoothingWindowSize, smoothingWindowPolynom)
         u.setMultiProcessingQueue(queue, i)
 
@@ -3260,7 +3207,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             fDict[f] = f[(f.rfind("/") + 1):max(f.lower().rfind(".mzxml"), f.lower().rfind(".mzml"))]
 
                     integrateResultsFile(resFileFull, resFileFull, fDict, "MZ",
-                                         "RT", "Xn", "Charge", "L_MZ", "Ionisation_Mode", "Num",
+                                         "RT", "Charge", "Ionisation_Mode", "Num",
                                          ppm=self.ui.groupPpm.value(),
                                          maxRTShift=self.ui.integrationMaxTimeDifference.value(),
                                          scales=[self.ui.wavelet_minScale.value(), self.ui.wavelet_maxScale.value()],
