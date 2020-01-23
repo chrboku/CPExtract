@@ -3207,7 +3207,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             fDict[f] = f[(f.rfind("/") + 1):max(f.lower().rfind(".mzxml"), f.lower().rfind(".mzml"))]
 
                     integrateResultsFile(resFileFull, resFileFull, fDict, "MZ",
-                                         "RT", "Charge", "Ionisation_Mode", "Num",
+                                         "RT", "Charge", "IonMode", "Num",
                                          ppm=self.ui.groupPpm.value(),
                                          maxRTShift=self.ui.integrationMaxTimeDifference.value(),
                                          scales=[self.ui.wavelet_minScale.value(), self.ui.wavelet_maxScale.value()],
@@ -4761,7 +4761,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     if pi.scanEvent in self.loadedMZXMLs[fi].getFilterLines(includeMS1=True, includeMS2=False, includePosPolarity=True, includeNegPolarity=True):
 
                         eic, times, scanIds, mzs=self.loadedMZXMLs[fi].getEIC(pi.mz, ppm=ppm, filterLine=pi.scanEvent)
-                        #eicL, times, scanIds, mzs = self.loadedMZXMLs[fi].getEIC(pi.lmz, ppm=ppm, filterLine=pi.scanEvent)
 
                         maxN=1
                         maxL=1
@@ -4773,14 +4772,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                                 if abs(pi.rt-(times[j]))<=0.2:
                                     m=max(m, eic[j])
-                                    ml=max(ml, eicL[j])
                             if m!=0:
                                 maxN=m
-                            if ml!=0:
-                                maxL=ml
-
-                        if False and self.ui.resultsExperimentNormaliseXICs_checkBox.isChecked():
-                            maxN=maxL
 
                         #intlim[0] = min(intlim[0], min([-eicL[j]/maxL for j in range(len(eic)) if rtBorderMin <= times[j] / 60. <= rtBorderMax]))
                         intlim[1] = max(intlim[1], max([eic[j]/maxN for j in range(len(eic)) if rtBorderMin <= times[j] / 60. <= rtBorderMax]))
@@ -4793,10 +4786,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                 mostAbundantFile=(fi, scan.intensity_list[peakID[0]], scan, group.color)
 
                         self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [e/maxN for e in eic], color=group.color, label="M: %s"%(a))
-                        #self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [-e/maxL for e in eicL], color=group.color, label="M': %s"%(a))
 
                         self.ui.resultsExperimentSeparatedPeaks_plot.axes.plot([t / 60. + grpInd for t in times if rtBorderMin<=t/60.<=rtBorderMax], [eic[j]/maxN for j in range(len(eic)) if rtBorderMin<=times[j]/60.<=rtBorderMax], color=group.color, label="M: %s"%(a))
-                        #self.ui.resultsExperimentSeparatedPeaks_plot.axes.plot([t / 60. + grpInd for t in times if rtBorderMin<=t/60.<=rtBorderMax], [-eicL[j]/maxL for j in range(len(eicL)) if rtBorderMin<=times[j]/60.<=rtBorderMax], color=group.color, label="M': %s"%(a))
 
 
             maxSigAbundance=0
@@ -4813,7 +4804,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     intLeft=mostAbundantFile[2].intensity_list[peakID[0]]
 
 
-                for i in [0,1,2,3,4,5,6]:
+                for i in range(0, 32):
                     mz=pi.mz+1.00335484*i
                     peakID = mostAbundantFile[2].findMZ(mz, ppm=ppm)
                     if peakID[0]!=-1:
