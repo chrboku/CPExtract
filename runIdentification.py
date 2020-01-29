@@ -124,12 +124,10 @@ class RunIdentification:
                  writePDF=False, writeFeatureML=False, writeTSV=False, writeMZXML=9,
                  metabolisationExperiment=False,
                  labellingisotopeA='12C', labellingisotopeB='13C', useCIsotopePatternValidation=0, xOffset=1.00335,
-                 minRatio=0, maxRatio=9999999, useRatio=False,
                  configuredTracer=None, intensityThreshold=0, intensityCutoff=0, maxLoading=1, xCounts="", ppm=2.,
-                 isotopicPatternCountLeft=2, isotopicPatternCountRight=2, lowAbundanceIsotopeCutoff=True, intensityThresholdIsotopologs=1000,
-                 intensityErrorN=0.25, intensityErrorL=0.25, purityN=0.99, purityL=0.99, minSpectraCount=1, clustPPM=8.,
+                 purityN=0.99, purityL=0.99, minSpectraCount=1, clustPPM=8.,
                  chromPeakPPM=5., snrTh=1., scales=[1, 35], peakCenterError=5, peakScaleError=3, minPeakCorr=0.85,
-                 checkPeaksRatio=False, minPeaksRatio=0, maxPeaksRatio=99999999,
+                 checkPeaksRatio=False,
                  calcIsoRatioNative=1, calcIsoRatioLabelled=-1, calcIsoRatioMoiety=1,
                  startTime=2, stopTime=37, positiveScanEvent="None", negativeScanEvent="None",
                  eicSmoothingWindow="None", eicSmoothingWindowSize=0, eicSmoothingPolynom=0, artificialMPshift_start=0, artificialMPshift_stop=0,
@@ -177,9 +175,6 @@ class RunIdentification:
         self.isotopeA = ma
         self.isotopeB = mb
         self.useCIsotopePatternValidation = useCIsotopePatternValidation
-        self.minRatio = minRatio
-        self.maxRatio = maxRatio
-        self.useRatio = useRatio
 
         self.configuredTracer = configuredTracer
         if not self.metabolisationExperiment:
@@ -202,12 +197,6 @@ class RunIdentification:
 
         self.xOffset = xOffset
         self.ppm = ppm
-        self.isotopicPatternCountLeft = isotopicPatternCountLeft
-        self.isotopicPatternCountRight = isotopicPatternCountRight
-        self.lowAbundanceIsotopeCutoff = lowAbundanceIsotopeCutoff
-        self.intensityThresholdIsotopologs = intensityThresholdIsotopologs
-        self.intensityErrorN = intensityErrorN
-        self.intensityErrorL = intensityErrorL
         self.purityN = purityN
         self.purityL = purityL
 
@@ -231,8 +220,6 @@ class RunIdentification:
         self.peakScaleError = peakScaleError
         self.minPeakCorr = minPeakCorr
         self.checkPeaksRatio=checkPeaksRatio
-        self.minPeaksRatio=minPeaksRatio
-        self.maxPeaksRatio=maxPeaksRatio
 
         self.calcIsoRatioNative=calcIsoRatioNative
         self.calcIsoRatioLabelled=calcIsoRatioLabelled
@@ -363,9 +350,6 @@ class RunIdentification:
         SQLInsert(curs, "config", key="isotopeA", value=self.isotopeA)
         SQLInsert(curs, "config", key="isotopeB", value=self.isotopeB)
         SQLInsert(curs, "config", key="useCValidation", value=self.useCIsotopePatternValidation)
-        SQLInsert(curs, "config", key="minRatio", value=self.minRatio)
-        SQLInsert(curs, "config", key="maxRatio", value=self.maxRatio)
-        SQLInsert(curs, "config", key="useRatio", value=str(self.useRatio))
         SQLInsert(curs, "config", key="metabolisationExperiment", value=str(self.metabolisationExperiment))
         SQLInsert(curs, "config", key="configuredTracer", value=base64.b64encode(dumps(self.configuredTracer)))
         SQLInsert(curs, "config", key="startTime", value=self.startTime)
@@ -378,12 +362,6 @@ class RunIdentification:
         SQLInsert(curs, "config", key="xCounts", value=self.xCountsString)
         SQLInsert(curs, "config", key="xOffset", value=self.xOffset)
         SQLInsert(curs, "config", key="ppm", value=self.ppm)
-        SQLInsert(curs, "config", key="isotopicPatternCountLeft", value=self.isotopicPatternCountLeft)
-        SQLInsert(curs, "config", key="isotopicPatternCountRight", value=self.isotopicPatternCountRight)
-        SQLInsert(curs, "config", key="lowAbundanceIsotopeCutoff", value=str(self.lowAbundanceIsotopeCutoff))
-        SQLInsert(curs, "config", key="intensityThresholdIsotopologs", value=str(self.intensityThresholdIsotopologs))
-        SQLInsert(curs, "config", key="intensityErrorN", value=self.intensityErrorN)
-        SQLInsert(curs, "config", key="intensityErrorL", value=self.intensityErrorL)
         SQLInsert(curs, "config", key="purityN", value=self.purityN)
         SQLInsert(curs, "config", key="purityL", value=self.purityL)
         SQLInsert(curs, "config", key="clustPPM", value=self.clustPPM)
@@ -400,8 +378,6 @@ class RunIdentification:
         SQLInsert(curs, "config", key="peakScaleError", value=self.peakScaleError)
         SQLInsert(curs, "config", key="minPeakCorr", value=self.minPeakCorr)
         SQLInsert(curs, "config", key="checkPeaksRatio", value=str(self.checkPeaksRatio))
-        SQLInsert(curs, "config", key="minPeaksRatio", value=self.minPeaksRatio)
-        SQLInsert(curs, "config", key="maxPeaksRatio", value=self.maxPeaksRatio)
         SQLInsert(curs, "config", key="calcIsoRatioNative", value=self.calcIsoRatioNative)
         SQLInsert(curs, "config", key="calcIsoRatioLabelled", value=self.calcIsoRatioLabelled)
         SQLInsert(curs, "config", key="calcIsoRatioMoiety", value=self.calcIsoRatioMoiety)
@@ -712,19 +688,6 @@ class RunIdentification:
         posFound = 0
         negFound = 0
 
-        checkRatio=False
-        minRatio=0.
-        maxRatio=0.
-
-        if self.metabolisationExperiment:
-            checkRatio=True
-            minRatio=tracer.monoisotopicRatio*tracer.maxRelNegBias
-            maxRatio=tracer.monoisotopicRatio*tracer.maxRelPosBias
-            self.printMessage("Tracer mono-isotopic ratio: %.5f (allowed: %.5f-%.5f)"%(tracer.monoisotopicRatio, minRatio, maxRatio))
-        else:
-            checkRatio=self.useRatio
-            minRatio=self.minRatio
-            maxRatio=self.maxRatio
 
         def reportFunctionHelper(curVal, text):
             reportFunction(curVal, text)
@@ -738,21 +701,16 @@ class RunIdentification:
                               labellingIsotopeB=self.labellingIsotopeB,
                               useCIsotopePatternValidation=self.useCIsotopePatternValidation,
                               intensityThres=self.intensityThreshold,
-                              isotopologIntensityThres=self.intensityThresholdIsotopologs,
                               maxLoading=self.maxLoading,
                               xCounts=self.xCounts,
                               xOffset=self.xOffset,
                               ppm=self.ppm,
-                              intensityErrorN=self.intensityErrorN, intensityErrorL=self.intensityErrorL,
                               purityN=tracer.enrichmentA if self.metabolisationExperiment > 1 else self.purityN,
                               purityL=tracer.enrichmentB if self.metabolisationExperiment > 1 else self.purityL,
                               startTime=self.startTime, stopTime=self.stopTime,
                               filterLine=self.positiveScanEvent,
                               ionMode="+",
-                              peakCountLeft=self.isotopicPatternCountLeft, peakCountRight=self.isotopicPatternCountRight,
-                              lowAbundanceIsotopeCutoff=self.lowAbundanceIsotopeCutoff,
                               metabolisationExperiment=self.metabolisationExperiment,
-                              checkRatio=checkRatio, minRatio=minRatio, maxRatio=maxRatio,
                               reportFunction=reportFunctionHelper)
             posFound = len(p)
             mzs.extend(p)
@@ -769,21 +727,16 @@ class RunIdentification:
                               labellingIsotopeB=self.labellingIsotopeB,
                               useCIsotopePatternValidation=self.useCIsotopePatternValidation,
                               intensityThres=self.intensityThreshold,
-                              isotopologIntensityThres=self.intensityThresholdIsotopologs,
                               maxLoading=self.maxLoading,
                               xCounts=self.xCounts,
                               xOffset=self.xOffset,
                               ppm=self.ppm,
-                              intensityErrorN=self.intensityErrorN, intensityErrorL=self.intensityErrorL,
                               purityN=tracer.enrichmentA if self.metabolisationExperiment > 1 else self.purityN,
                               purityL=tracer.enrichmentB if self.metabolisationExperiment > 1 else self.purityL,
                               startTime=self.startTime, stopTime=self.stopTime,
                               filterLine=self.negativeScanEvent,
                               ionMode="-",
-                              peakCountLeft=self.isotopicPatternCountLeft, peakCountRight=self.isotopicPatternCountRight,
-                              lowAbundanceIsotopeCutoff=self.lowAbundanceIsotopeCutoff,
                               metabolisationExperiment=self.metabolisationExperiment,
-                              checkRatio=checkRatio, minRatio=minRatio, maxRatio=maxRatio,
                               reportFunction=reportFunctionHelper)
             negFound = len(n)
             mzs.extend(n)
@@ -990,7 +943,7 @@ class RunIdentification:
     # data processing step 3: for each signal pair cluster extract the EICs, detect chromatographic peaks
     # present in both EICs at approximately the same retention time and very their chromatographic peak shapes.
     # if all criteria are passed, write this detected feature pair to the database
-    def findChromatographicPeaksAndWriteToDB(self, mzbins, mzxml, reportFunction=None):
+    def findChromatographicPeaksAndWriteToDB(self, mzbins, mzxml, rules, reportFunction=None):
         conn = connect(self.file + getDBSuffix())
         curs = conn.cursor()
         chromPeaks = []
@@ -1013,7 +966,6 @@ class RunIdentification:
                     if len(kids) < self.minSpectraCount:
                         continue
 
-
                     otherIsotopologs = kids[0].getObject().otherIsotopologs
                     similarityString = kids[0].getObject().similarityString
                     loading=kids[0].getObject().loading
@@ -1024,6 +976,9 @@ class RunIdentification:
                     mz = weightedMean([kid.getObject().mz for kid in kids],[kid.getObject().nIntensity for kid in kids])
                     eic, peaks, times = self.__getChromPeaksFor(mz, mzxml, scanEvent)
                     for peak in peaks:
+
+                        peakAreas={}
+                        peakAreas["X"]=Bunch(intensity=peak.peakArea)
 
                         ## Test if pattern was present in at least n scans
                         assignedScans=[]
@@ -1075,8 +1030,11 @@ class RunIdentification:
                             closestMatch.peaksCorr=co.correlation
                             closestMatch.artificialShift=co.artificialShift
                             closestMatch.peaksRatio=self.getMeanRatioOfScans(eicL, eic, lb, rb)
+                            peakAreas[otherIsotopolog]=Bunch(intensity=closestMatch.peakArea)
 
-                        if allIsotopologsFound:
+
+
+                        if allIsotopologsFound and (not(self.checkPeaksRatio) or RuleMatcher(rules, ppm=self.ppm).checkChromPeaks(peakAreas)):
                             feat=ChromPeakFeature(id=len(chromPeaks)+1, fGroupID=len(chromPeaks)+1, assignedName="",
                                  mz=mz, loading=loading, ionMode=ionMode, similarityString=similarityString,
                                  PeakCenter=peak.peakIndex, PeakCenterMin=times[peak.peakIndex]/60., PeakScale=peak.peakScale,
@@ -1098,6 +1056,7 @@ class RunIdentification:
                                     peakB=peak.foundMatches[iso]
                                     self.printMessage("    --> %s, RT %5.2f min, Area %12.1f (AreaRatio %8.3f%%, IntensityRatio %8.3f%%), Pearson correlation %6.3f, Artificial shift %4d" %
                                                       (iso, times[peakB.peakIndex] / 60., peakB.peakArea,100*peakB.peakArea/peak.peakArea, 100*peakB.peaksRatio, peakB.peaksCorr, peakB.artificialShift), type="warning")
+                                self.printMessage("Rules are "+str(RuleMatcher(rules, ppm=self.ppm).checkChromPeaks(peakAreas)).lower()+" using the peak areas")
 
         conn.commit()
         curs.close()
@@ -1474,11 +1433,6 @@ class RunIdentification:
             processingParams.xCounts=self.xCountsString
             processingParams.xoffset=self.xOffset
             processingParams.ppm=self.ppm
-            processingParams.isotopicPatternCountLeft=self.isotopicPatternCountLeft
-            processingParams.isotopicPatternCountRight=self.isotopicPatternCountRight
-            processingParams.lowAbundanceIsotopeCutoff=self.lowAbundanceIsotopeCutoff
-            processingParams.intensityErrorN=self.intensityErrorN
-            processingParams.intensityErrorL=self.intensityErrorL
             processingParams.purityN=self.purityN
             processingParams.purityL=self.purityL
 
@@ -1628,7 +1582,7 @@ class RunIdentification:
                 self.postMessageToProgressWrapper("value",0.35 + 0.3 * curVal)
                 self.postMessageToProgressWrapper("text", "Separating feature pairs (%s)" % (text))
 
-            chromPeaks = self.findChromatographicPeaksAndWriteToDB(mzbins, mzxml, reportFunction)
+            chromPeaks = self.findChromatographicPeaksAndWriteToDB(mzbins, mzxml, self.rules, reportFunction)
 
             self.printMessage("Separating feature pairs done. pos: %d neg: %d chromatographic peaks (including mismatches)" % (len([c for c in chromPeaks if c.ionMode == "+"]),len([c for c in chromPeaks if c.ionMode == "-"])), type="info")
             # endregion

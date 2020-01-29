@@ -112,7 +112,7 @@ class RuleMatcher:
 
         for iso in self.isos.keys():
             if iso not in isotopologDict:
-                b=Bunch(isoInd=None, intensity=None, mz=None)
+                b=Bunch(intensity=None)
 
                 if iso=="X":
                     b.mz=mz
@@ -123,8 +123,7 @@ class RuleMatcher:
                 ind=msScan.getMostIntensePeak(bound[0], bound[1])
 
                 if ind!=-1:
-                    b.isoInd=ind
-                    b.intensity=msScan.intensity_list[b.isoInd]
+                    b.intensity=msScan.intensity_list[ind]
 
                     isotopologDict[iso]=b
                     noNeedToCheckFurther.append(ind)
@@ -136,6 +135,16 @@ class RuleMatcher:
                 rulesValid=rulesValid and ruleValid
 
         return rulesValid, noNeedToCheckFurther if rulesValid else []
+
+    def checkChromPeaks(self, peakAreas):
+        rulesValid=True
+        for rule in self.rules:
+            if rulesValid:
+                ruleValid=rule.check(peakAreas, log=self.log)
+                rulesValid=rulesValid and ruleValid
+
+        return rulesValid
+
 
     def getChromatographicPeaks(self):
         chromPeaks={}

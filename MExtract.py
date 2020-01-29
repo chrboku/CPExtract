@@ -1251,11 +1251,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.smoothingWindowPolynomLabel.setVisible(e)
         self.ui.smoothingPolynom_spinner.setVisible(e)
 
-    def isoSearchChanged(self):
-        self.ui.label_73.setVisible(self.ui.isoAbundance.checkState()==QtCore.Qt.Checked)
-        self.ui.intensityThresholdIsotopologs.setVisible(self.ui.isoAbundance.checkState()==QtCore.Qt.Checked)
-        #if self.ui.isoAbundance.checkState()==QtCore.Qt.Checked:
-        #    self.ui.intensityThresholdIsotopologs.setValue(self.ui.intensityThreshold.value())
 
 
     # check if all imported LC-HRMS data files were processed with the same MetExtract settings
@@ -2129,8 +2124,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 self.ui.intensityThreshold.setValue(sett.value("IntensityThreshold").toInt()[0])
             if sett.contains("IntensityCutoff"):
                 self.ui.intensityCutoff.setValue(sett.value("IntensityCutoff").toInt()[0])
-            if sett.contains("intensityThresholdIsotopologs"):
-                self.ui.intensityThresholdIsotopologs.setValue(sett.value("intensityThresholdIsotopologs").toInt()[0])
 
             if sett.contains("ScanStart"):
                 self.ui.scanStartTime.setValue(sett.value("ScanStart").toDouble()[0])
@@ -2154,12 +2147,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 self.ui.isotopePatternCountA.setValue(sett.value("IsotopicPatternCountA").toInt()[0])
             if sett.contains("IsotopicPatternCountB"):
                 self.ui.isotopePatternCountB.setValue(sett.value("IsotopicPatternCountB").toInt()[0])
-            if sett.contains("lowAbundanceIsotopeCutoff"):
-                self.ui.isoAbundance.setChecked(sett.value("lowAbundanceIsotopeCutoff").toBool())
-            if sett.contains("IntensityAbundanceErrorA"):
-                self.ui.baseRange.setValue(sett.value("IntensityAbundanceErrorA").toDouble()[0])
-            if sett.contains("IntensityAbundanceErrorB"):
-                self.ui.isotopeRange.setValue(sett.value("IntensityAbundanceErrorB").toDouble()[0])
 
             if sett.contains("ClustPPM"):
                 self.ui.clustPPM.setValue(sett.value("ClustPPM").toDouble()[0])
@@ -2203,10 +2190,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 self.ui.minPeakCorr.setValue(sett.value("Peak_minPeakCorr").toDouble()[0])
             if sett.contains("checkBox_checkPeakRatio"):
                 self.ui.checkBox_checkPeakRatio.setChecked(sett.value("checkBox_checkPeakRatio").toBool())
-            if sett.contains("doubleSpinBox_minPeakRatio"):
-                self.ui.doubleSpinBox_minPeakRatio.setValue(sett.value("doubleSpinBox_minPeakRatio").toDouble()[0])
-            if sett.contains("doubleSpinBox_maxPeakRatio"):
-                self.ui.doubleSpinBox_maxPeakRatio.setValue(sett.value("doubleSpinBox_maxPeakRatio").toDouble()[0])
 
             if sett.contains("calcIsoRatioNative"):
                 self.ui.calcIsoRatioNative_spinBox.setValue(sett.value("calcIsoRatioNative").toInt()[0])
@@ -2399,10 +2382,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             sett.setValue("MaxMassDeviation", self.ui.ppmRangeIdentification.value())
             sett.setValue("IsotopicPatternCountA", self.ui.isotopePatternCountA.value())
             sett.setValue("IsotopicPatternCountB", self.ui.isotopePatternCountB.value())
-            sett.setValue("lowAbundanceIsotopeCutoff", self.ui.isoAbundance.checkState() == QtCore.Qt.Checked)
-            sett.setValue("intensityThresholdIsotopologs", self.ui.intensityThresholdIsotopologs.value())
-            sett.setValue("IntensityAbundanceErrorA", self.ui.baseRange.value())
-            sett.setValue("IntensityAbundanceErrorB", self.ui.isotopeRange.value())
 
             sett.setValue("ClustPPM", self.ui.clustPPM.value())
             sett.setValue("minSpectraCount", self.ui.minSpectraCount.value())
@@ -2421,8 +2400,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             sett.setValue("Peak_WidthError", self.ui.peak_scaleError.value())
             sett.setValue("Peak_minPeakCorr", self.ui.minPeakCorr.value())
             sett.setValue("checkBox_checkPeakRatio", self.ui.checkBox_checkPeakRatio.isChecked())
-            sett.setValue("doubleSpinBox_minPeakRatio", self.ui.doubleSpinBox_minPeakRatio.value())
-            sett.setValue("doubleSpinBox_maxPeakRatio", self.ui.doubleSpinBox_maxPeakRatio.value())
 
             sett.setValue("calcIsoRatioNative", self.ui.calcIsoRatioNative_spinBox.value())
             sett.setValue("calcIsoRatioLabelled", self.ui.calcIsoRatioLabelled_spinBox.value())
@@ -2718,22 +2695,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                   labellingisotopeA=str(self.ui.isotopeAText.text()),
                                   labellingisotopeB=str(self.ui.isotopeBText.text()),
                                   xOffset=self.isotopeBmass - self.isotopeAmass,
-                                  useRatio=self.ui.useRatio.isChecked(),
-                                  minRatio=self.ui.minRatio.value(),
-                                  maxRatio=self.ui.maxRatio.value(),
                                   useCIsotopePatternValidation=3 if self.labellingExperiment==CUSTOMPATTERN else 2 if self.labellingExperiment==TRACER else int(str(self.ui.useCValidation.checkState())),
                                   configuredTracer=self.configuredTracer,
                                   startTime=self.ui.scanStartTime.value(), stopTime=self.ui.scanEndTime.value(),
                                   maxLoading=self.ui.maxLoading.value(),
                                   xCounts=str(self.ui.xCountSearch.text()),
                                   ppm=self.ui.ppmRangeIdentification.value(),
-                                  isotopicPatternCountLeft=self.ui.isotopePatternCountA.value(),
-                                  isotopicPatternCountRight=self.ui.isotopePatternCountB.value(),
-                                  lowAbundanceIsotopeCutoff=self.ui.isoAbundance.checkState() == QtCore.Qt.Checked,
-                                  intensityThresholdIsotopologs=self.ui.intensityThresholdIsotopologs.value(),
                                   purityN=self.ui.isotopicAbundanceA.value(),
-                                  purityL=self.ui.isotopicAbundanceB.value(), intensityErrorN=self.ui.baseRange.value(),
-                                  intensityErrorL=self.ui.isotopeRange.value(),
+                                  purityL=self.ui.isotopicAbundanceB.value(),
                                   minSpectraCount=self.ui.minSpectraCount.value(), clustPPM=self.ui.clustPPM.value(),
                                   chromPeakPPM=self.ui.wavelet_EICppm.value(),
                                   eicSmoothingWindow=str(self.ui.eicSmoothingWindow.currentText()),
@@ -2747,8 +2716,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                   peakScaleError=self.ui.peak_scaleError.value(),
                                   minPeakCorr=self.ui.minPeakCorr.value(),
                                   checkPeaksRatio=self.ui.checkBox_checkPeakRatio.isChecked(),
-                                  minPeaksRatio=self.ui.doubleSpinBox_minPeakRatio.value(),
-                                  maxPeaksRatio=self.ui.doubleSpinBox_maxPeakRatio.value(),
                                   calcIsoRatioNative=self.ui.calcIsoRatioNative_spinBox.value(),
                                   calcIsoRatioLabelled=self.ui.calcIsoRatioLabelled_spinBox.value(),
                                   calcIsoRatioMoiety=self.ui.calcIsoRatioMoiety_spinBox.value(),
@@ -2908,21 +2875,13 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                       labellingisotopeA=str(self.ui.isotopeAText.text()),
                                                       labellingisotopeB=str(self.ui.isotopeBText.text()),
                                                       xOffset=self.isotopeBmass - self.isotopeAmass,
-                                                      useRatio=self.ui.useRatio.isChecked(),
-                                                      minRatio=self.ui.minRatio.value(),
-                                                      maxRatio=self.ui.maxRatio.value(),
                                                       useCIsotopePatternValidation=int(str(self.ui.useCValidation.checkState())) if self.labellingExperiment != CUSTOMPATTERN else 2,
                                                       configuredTracer=self.configuredTracer, startTime=self.ui.scanStartTime.value(),
                                                       stopTime=self.ui.scanEndTime.value(), maxLoading=self.ui.maxLoading.value(),
                                                       xCounts=str(self.ui.xCountSearch.text()),
                                                       ppm=self.ui.ppmRangeIdentification.value(),
-                                                      isotopicPatternCountLeft=self.ui.isotopePatternCountA.value(),
-                                                      isotopicPatternCountRight=self.ui.isotopePatternCountB.value(),
-                                                      lowAbundanceIsotopeCutoff=self.ui.isoAbundance.checkState() == QtCore.Qt.Checked,
-                                                      intensityThresholdIsotopologs=self.ui.intensityThresholdIsotopologs.value(),
                                                       purityN=self.ui.isotopicAbundanceA.value(),
-                                                      purityL=self.ui.isotopicAbundanceB.value(), intensityErrorN=self.ui.baseRange.value(),
-                                                      intensityErrorL=self.ui.isotopeRange.value(),
+                                                      purityL=self.ui.isotopicAbundanceB.value(),
                                                       minSpectraCount=self.ui.minSpectraCount.value(), clustPPM=self.ui.clustPPM.value(),
                                                       chromPeakPPM=self.ui.wavelet_EICppm.value(),
                                                       eicSmoothingWindow=str(self.ui.eicSmoothingWindow.currentText()),
@@ -2936,8 +2895,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                       peakScaleError=self.ui.peak_scaleError.value(),
                                                       minPeakCorr=self.ui.minPeakCorr.value(),
                                                       checkPeaksRatio=self.ui.checkBox_checkPeakRatio.isChecked(),
-                                                      minPeaksRatio=self.ui.doubleSpinBox_minPeakRatio.value(),
-                                                      maxPeaksRatio=self.ui.doubleSpinBox_maxPeakRatio.value(),
                                                       calcIsoRatioNative=self.ui.calcIsoRatioNative_spinBox.value(),
                                                       calcIsoRatioLabelled=self.ui.calcIsoRatioLabelled_spinBox.value(),
                                                       calcIsoRatioMoiety=self.ui.calcIsoRatioMoiety_spinBox.value(),
@@ -3081,19 +3038,12 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                                 labellingisotopeA=str(self.ui.isotopeAText.text()),
                                                                 labellingisotopeB=str(self.ui.isotopeBText.text()),
                                                                 xOffset=self.isotopeBmass - self.isotopeAmass,
-                                                                useRatio=self.ui.useRatio.isChecked(),
-                                                                minRatio=self.ui.minRatio.value(),
-                                                                maxRatio=self.ui.maxRatio.value(),
                                                                 useCIsotopePatternValidation=3 if self.labellingExperiment == CUSTOMPATTERN else 2 if self.labellingExperiment == TRACER else int(str(self.ui.useCValidation.checkState())),
                                                                 configuredTracer=self.configuredTracer, startTime=self.ui.scanStartTime.value(),
                                                                 stopTime=self.ui.scanEndTime.value(), maxLoading=self.ui.maxLoading.value(),
                                                                 xCounts=str(self.ui.xCountSearch.text()),
-                                                                isotopicPatternCountLeft=self.ui.isotopePatternCountA.value(),
-                                                                isotopicPatternCountRight=self.ui.isotopePatternCountB.value(),
-                                                                lowAbundanceIsotopeCutoff=self.ui.isoAbundance.checkState() == QtCore.Qt.Checked,
                                                                 purityN=self.ui.isotopicAbundanceA.value(),
-                                                                purityL=self.ui.isotopicAbundanceB.value(), intensityErrorN=self.ui.baseRange.value(),
-                                                                intensityErrorL=self.ui.isotopeRange.value(),
+                                                                purityL=self.ui.isotopicAbundanceB.value(),
                                                                 minSpectraCount=self.ui.minSpectraCount.value(), clustPPM=self.ui.clustPPM.value(),
                                                                 chromPeakPPM=self.ui.wavelet_EICppm.value(),
                                                                 eicSmoothingWindow=str(self.ui.eicSmoothingWindow.currentText()),
@@ -4890,11 +4840,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             self.ui.groupBox_ISOA.setVisible(False)
             self.ui.groupBox_ISOB.setVisible(False)
-            self.ui.useCValidation.setVisible(False)
 
             self.ui.CPEditOpen.setVisible(True)
 
-            self.ui.useRatio.setVisible(False)
 
             self.ui.numberOfAtomsBox.setVisible(False)
         else:
@@ -5322,8 +5270,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.isotopeAText.textChanged.connect(self.isotopeATextChanged)
         self.ui.isotopeBText.textChanged.connect(self.isotopeBTextChanged)
 
-        self.ui.useRatio.setChecked(False)
-
         self.configuredTracer = None
         self.updateTracerInfo()
         self.ui.setupTracers.clicked.connect(self.showTracerEditor)
@@ -5377,11 +5323,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         self.ui.eicSmoothingWindow.currentIndexChanged.connect(self.smoothingWindowChanged)
         self.smoothingWindowChanged()
-
-        self.ui.isoAbundance.stateChanged.connect(self.isoSearchChanged)
-        self.isoSearchChanged()
-
-
 
         self.ui.autoZoomPlot.stateChanged.connect(self.selectedResChanged)
         self.ui.negEIC.stateChanged.connect(self.selectedResChanged)
@@ -5772,6 +5713,11 @@ if __name__ == '__main__':
                                   "WARNING: Gradient descend algorithm for chromatographic peak picking is selected",
                                   QtGui.QMessageBox.Ok)
         except:
+
+            import traceback
+
+            traceback.print_exc()
+            logging.error(str(traceback))
             mainWin=None
 
         if mainWin is not None:

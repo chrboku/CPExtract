@@ -939,8 +939,8 @@ font: 7pt;</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1521</width>
-             <height>1980</height>
+             <width>1491</width>
+             <height>1996</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -1904,52 +1904,10 @@ font: 7pt;</string>
                               </widget>
                              </item>
                              <item>
-                              <widget class="QGroupBox" name="checkBox_checkPeakRatio">
-                               <property name="title">
-                                <string>Required M:M' peak area ratio</string>
+                              <widget class="QCheckBox" name="checkBox_checkPeakRatio">
+                               <property name="text">
+                                <string>Test peak areas for pattern</string>
                                </property>
-                               <property name="checkable">
-                                <bool>true</bool>
-                               </property>
-                               <property name="checked">
-                                <bool>false</bool>
-                               </property>
-                               <layout class="QGridLayout" name="gridLayout_49">
-                                <item row="0" column="2">
-                                 <widget class="QDoubleSpinBox" name="doubleSpinBox_minPeakRatio">
-                                  <property name="decimals">
-                                   <number>4</number>
-                                  </property>
-                                  <property name="value">
-                                   <double>0.000100000000000</double>
-                                  </property>
-                                 </widget>
-                                </item>
-                                <item row="1" column="2">
-                                 <widget class="QDoubleSpinBox" name="doubleSpinBox_maxPeakRatio">
-                                  <property name="maximum">
-                                   <double>999999.000000000000000</double>
-                                  </property>
-                                  <property name="value">
-                                   <double>9999.000000000000000</double>
-                                  </property>
-                                 </widget>
-                                </item>
-                                <item row="0" column="0">
-                                 <widget class="QLabel" name="label_77">
-                                  <property name="text">
-                                   <string>Min. ratio</string>
-                                  </property>
-                                 </widget>
-                                </item>
-                                <item row="1" column="0">
-                                 <widget class="QLabel" name="label_78">
-                                  <property name="text">
-                                   <string>Max. ratio</string>
-                                  </property>
-                                 </widget>
-                                </item>
-                               </layout>
                               </widget>
                              </item>
                              <item>
@@ -1974,7 +1932,7 @@ font: 7pt;</string>
                       </layout>
                      </item>
                      <item row="0" column="4">
-                      <layout class="QVBoxLayout" name="verticalLayout_21" stretch="0,0,0,0,0,0">
+                      <layout class="QVBoxLayout" name="verticalLayout_21" stretch="0,0,0,0,0">
                        <item>
                         <layout class="QVBoxLayout" name="verticalLayout_7">
                          <item>
@@ -2102,19 +2060,6 @@ font: 7pt;</string>
                            </property>
                           </widget>
                          </item>
-                         <item row="4" column="1">
-                          <widget class="QSpinBox" name="isotopePatternCountA">
-                           <property name="minimum">
-                            <number>1</number>
-                           </property>
-                           <property name="maximum">
-                            <number>2</number>
-                           </property>
-                           <property name="value">
-                            <number>2</number>
-                           </property>
-                          </widget>
-                         </item>
                          <item row="2" column="1">
                           <widget class="QSpinBox" name="maxLoading">
                            <property name="minimum">
@@ -2128,13 +2073,16 @@ font: 7pt;</string>
                            </property>
                           </widget>
                          </item>
-                         <item row="1" column="1">
-                          <widget class="QSpinBox" name="intensityCutoff">
-                           <property name="maximum">
-                            <number>100000000</number>
+                         <item row="4" column="1">
+                          <widget class="QSpinBox" name="isotopePatternCountA">
+                           <property name="minimum">
+                            <number>1</number>
                            </property>
-                           <property name="singleStep">
-                            <number>1000</number>
+                           <property name="maximum">
+                            <number>2</number>
+                           </property>
+                           <property name="value">
+                            <number>2</number>
                            </property>
                           </widget>
                          </item>
@@ -2160,26 +2108,30 @@ font: 7pt;</string>
                            </property>
                           </widget>
                          </item>
-                         <item row="6" column="0" colspan="2">
-                          <widget class="QCheckBox" name="isoAbundance">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
+                         <item row="1" column="1">
+                          <widget class="QSpinBox" name="intensityCutoff">
+                           <property name="maximum">
+                            <number>100000000</number>
                            </property>
-                           <property name="text">
-                            <string>Consider isotopolog abundance</string>
+                           <property name="singleStep">
+                            <number>1000</number>
                            </property>
                           </widget>
                          </item>
-                         <item row="5" column="0">
-                          <widget class="QLabel" name="label_29">
+                         <item row="2" column="0">
+                          <widget class="QLabel" name="label_34">
                            <property name="text">
-                            <string>Isotopologs L</string>
+                            <string>Max. charge</string>
                            </property>
                            <property name="margin">
                             <number>3</number>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="1" column="0">
+                          <widget class="QLabel" name="label_31">
+                           <property name="text">
+                            <string>Intensity cutoff (≤)</string>
                            </property>
                           </widget>
                          </item>
@@ -2215,20 +2167,13 @@ font: 7pt;</string>
                            </property>
                           </widget>
                          </item>
-                         <item row="2" column="0">
-                          <widget class="QLabel" name="label_34">
+                         <item row="5" column="0">
+                          <widget class="QLabel" name="label_29">
                            <property name="text">
-                            <string>Max. charge</string>
+                            <string>Isotopologs L</string>
                            </property>
                            <property name="margin">
                             <number>3</number>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="1" column="0">
-                          <widget class="QLabel" name="label_31">
-                           <property name="text">
-                            <string>Intensity cutoff (≤)</string>
                            </property>
                           </widget>
                          </item>
@@ -2244,99 +2189,7 @@ the pure Isotope Peak</string>
                            </property>
                           </widget>
                          </item>
-                         <item row="7" column="0">
-                          <widget class="QLabel" name="label_73">
-                           <property name="text">
-                            <string>Isotopologs threshold (≥)</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="7" column="1">
-                          <widget class="QDoubleSpinBox" name="intensityThresholdIsotopologs">
-                           <property name="decimals">
-                            <number>0</number>
-                           </property>
-                           <property name="maximum">
-                            <double>1000000000.000000000000000</double>
-                           </property>
-                           <property name="singleStep">
-                            <double>1000.000000000000000</double>
-                           </property>
-                           <property name="value">
-                            <double>1000.000000000000000</double>
-                           </property>
-                          </widget>
-                         </item>
                         </layout>
-                       </item>
-                       <item>
-                        <widget class="QGroupBox" name="groupBox_6">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-                           <horstretch>0</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="title">
-                          <string>Intensity abundance error</string>
-                         </property>
-                         <layout class="QGridLayout" name="gridLayout_16">
-                          <item row="0" column="0">
-                           <layout class="QGridLayout" name="gridLayout_30">
-                            <item row="1" column="0">
-                             <widget class="QLabel" name="label_17">
-                              <property name="toolTip">
-                               <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;The observed Intensities differ from the theoretical Intensities for a certain M/Z. This parameter controls the deviation of the theoretical and observed Intensities for a mixed Base and Isotope M/Z Peak&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                              </property>
-                              <property name="text">
-                               <string>Labeled ion (±)</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="0" column="1">
-                             <widget class="QDoubleSpinBox" name="baseRange">
-                              <property name="maximum">
-                               <double>2.000000000000000</double>
-                              </property>
-                              <property name="singleStep">
-                               <double>0.010000000000000</double>
-                              </property>
-                              <property name="value">
-                               <double>0.250000000000000</double>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="1" column="1">
-                             <widget class="QDoubleSpinBox" name="isotopeRange">
-                              <property name="maximum">
-                               <double>2.000000000000000</double>
-                              </property>
-                              <property name="singleStep">
-                               <double>0.010000000000000</double>
-                              </property>
-                              <property name="value">
-                               <double>0.250000000000000</double>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="0" column="0">
-                             <widget class="QLabel" name="label_16">
-                              <property name="toolTip">
-                               <string>The observed Intensities differ from the theoretical Intensities for a certain M/Z. This parameter controls the deviation of the theoretical and observed Intensities for a mixed Base and Isotope M/Z Peak</string>
-                              </property>
-                              <property name="text">
-                               <string>Non-labeled ion (±)</string>
-                              </property>
-                             </widget>
-                            </item>
-                           </layout>
-                          </item>
-                         </layout>
-                        </widget>
                        </item>
                        <item>
                         <spacer name="verticalSpacer_21">
@@ -2605,75 +2458,6 @@ p, li { white-space: pre-wrap; }
                           </size>
                          </property>
                         </spacer>
-                       </item>
-                       <item>
-                        <widget class="QCheckBox" name="useCValidation">
-                         <property name="text">
-                          <string>Use Carbon-isotopepattern validation</string>
-                         </property>
-                         <property name="tristate">
-                          <bool>false</bool>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QGroupBox" name="useRatio">
-                         <property name="title">
-                          <string>Required M:M' signal ratio</string>
-                         </property>
-                         <property name="checkable">
-                          <bool>true</bool>
-                         </property>
-                         <property name="checked">
-                          <bool>false</bool>
-                         </property>
-                         <layout class="QGridLayout" name="gridLayout_45">
-                          <item row="0" column="0">
-                           <layout class="QGridLayout" name="gridLayout_44">
-                            <item row="0" column="0">
-                             <widget class="QLabel" name="label_3">
-                              <property name="text">
-                               <string>Min. ratio</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="1" column="0">
-                             <widget class="QLabel" name="label_40">
-                              <property name="text">
-                               <string>Max. ratio</string>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="0" column="1">
-                             <widget class="QDoubleSpinBox" name="minRatio">
-                              <property name="decimals">
-                               <number>4</number>
-                              </property>
-                              <property name="maximum">
-                               <double>9999.989999999999782</double>
-                              </property>
-                              <property name="singleStep">
-                               <double>0.100000000000000</double>
-                              </property>
-                             </widget>
-                            </item>
-                            <item row="1" column="1">
-                             <widget class="QDoubleSpinBox" name="maxRatio">
-                              <property name="maximum">
-                               <double>999999.989999999990687</double>
-                              </property>
-                              <property name="singleStep">
-                               <double>0.100000000000000</double>
-                              </property>
-                              <property name="value">
-                               <double>9999.000000000000000</double>
-                              </property>
-                             </widget>
-                            </item>
-                           </layout>
-                          </item>
-                         </layout>
-                        </widget>
                        </item>
                        <item>
                         <layout class="QGridLayout" name="gridLayout_34">
@@ -4275,8 +4059,8 @@ font: 7pt;</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1940</width>
-             <height>1280</height>
+             <width>1564</width>
+             <height>878</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_15">
@@ -4935,8 +4719,8 @@ font: 7pt;</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1922</width>
-             <height>1262</height>
+             <width>1248</width>
+             <height>641</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_40">
@@ -5285,9 +5069,6 @@ font: 7pt;</string>
   <tabstop>isotopicAbundanceA</tabstop>
   <tabstop>isotopeBText</tabstop>
   <tabstop>isotopicAbundanceB</tabstop>
-  <tabstop>useCValidation</tabstop>
-  <tabstop>minRatio</tabstop>
-  <tabstop>maxRatio</tabstop>
   <tabstop>setupTracers</tabstop>
   <tabstop>xCountSearch</tabstop>
   <tabstop>scanStartTime</tabstop>
@@ -5298,10 +5079,6 @@ font: 7pt;</string>
   <tabstop>ppmRangeIdentification</tabstop>
   <tabstop>isotopePatternCountA</tabstop>
   <tabstop>isotopePatternCountB</tabstop>
-  <tabstop>isoAbundance</tabstop>
-  <tabstop>intensityThresholdIsotopologs</tabstop>
-  <tabstop>baseRange</tabstop>
-  <tabstop>isotopeRange</tabstop>
   <tabstop>clustPPM</tabstop>
   <tabstop>minSpectraCount</tabstop>
   <tabstop>wavelet_EICppm</tabstop>
@@ -5314,9 +5091,6 @@ font: 7pt;</string>
   <tabstop>peak_centerError</tabstop>
   <tabstop>peak_scaleError</tabstop>
   <tabstop>minPeakCorr</tabstop>
-  <tabstop>checkBox_checkPeakRatio</tabstop>
-  <tabstop>doubleSpinBox_minPeakRatio</tabstop>
-  <tabstop>doubleSpinBox_maxPeakRatio</tabstop>
   <tabstop>correctcCount</tabstop>
   <tabstop>calcIsoRatioNative_spinBox</tabstop>
   <tabstop>calcIsoRatioLabelled_spinBox</tabstop>

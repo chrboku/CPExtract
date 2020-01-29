@@ -85,10 +85,10 @@ def getCombinationsOfLabel(useElems, labelingElements, minLabelingAtoms, maxLabe
 # are in general not supported. They can, however, be detected if not isotopolog verification step is
 # used (not recommended)
 def matchPartners(mzXMLData, rules,
-                  labellingIsotopeB, useCIsotopePatternValidation, intensityThres, isotopologIntensityThres, maxLoading, xCounts, xOffset, ppm,
-                  intensityErrorN, intensityErrorL, purityN, purityL, startTime, stopTime, filterLine, ionMode,
-                  peakCountLeft, peakCountRight, lowAbundanceIsotopeCutoff, metabolisationExperiment, checkRatio,
-                  minRatio, maxRatio, reportFunction=None, writeExtendedDiagnostics=True, searchDirection="asc"):
+                  labellingIsotopeB, useCIsotopePatternValidation, intensityThres, maxLoading, xCounts, xOffset, ppm,
+                  purityN, purityL, startTime, stopTime, filterLine, ionMode,
+                  metabolisationExperiment,
+                  reportFunction=None, writeExtendedDiagnostics=True, searchDirection="asc"):
     scanRTRange = stopTime - startTime
 
     cValidationOffset = 1.00335484   # mass difference between 12C and 13C
