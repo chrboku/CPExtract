@@ -70,7 +70,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="inputTab">
        <attribute name="title">
@@ -940,7 +940,7 @@ font: 7pt;</string>
              <x>0</x>
              <y>0</y>
              <width>1491</width>
-             <height>1996</height>
+             <height>1967</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -4059,8 +4059,8 @@ font: 7pt;</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1564</width>
-             <height>878</height>
+             <width>1940</width>
+             <height>1280</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_15">
@@ -4480,7 +4480,7 @@ font: 7pt;</string>
                          </layout>
                         </item>
                         <item row="1" column="0">
-                         <widget class="QWidget" name="visualizationWidget" native="true">
+                         <widget class="QWidget" name="visualization_singleFile_EIC" native="true">
                           <property name="sizePolicy">
                            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                             <horstretch>0</horstretch>
@@ -4571,7 +4571,7 @@ font: 7pt;</string>
                          </layout>
                         </item>
                         <item row="0" column="0">
-                         <widget class="QWidget" name="visualizationWidget3" native="true">
+                         <widget class="QWidget" name="visualization_singleFile_MSScan" native="true">
                           <property name="sizePolicy">
                            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                             <horstretch>0</horstretch>
@@ -4719,8 +4719,8 @@ font: 7pt;</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1248</width>
-             <height>641</height>
+             <width>1922</width>
+             <height>1262</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_40">

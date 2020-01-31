@@ -3941,10 +3941,10 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         ## Draw new plots
 
         ## Clean old illustrations
-        self.clearPlot(self.ui.pl1)
+        self.clearPlot(self.ui.singleEIC)
         self.clearPlot(self.ui.pl2A)
         self.clearPlot(self.ui.pl2B)
-        self.clearPlot(self.ui.pl3)
+        self.clearPlot(self.ui.singleMSScan)
         for i in range(self.ui.res_ExtractedData.topLevelItemCount()):
             self.deColorQTreeWidgetItem(self.ui.res_ExtractedData.topLevelItem(i))
 
@@ -3983,7 +3983,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                 child=item.child(childi)
                                                 mzs.append(child.data.mz)
                                             for mzi, mz in enumerate(mzs):
-                                                eic, times, scanIds, mzs=self.currentOpenRawFile.getEIC(mz, ppm=self.ui.wavelet_EICppm.value(), filterLine=str(self.ui.positiveScanEvent.currentText()) if item.data.ionMode=="+" else str(self.ui.negativeScanEvent.currentText()))
+                                                eic, times, scanIds, gg=self.currentOpenRawFile.getEIC(mz, ppm=self.ui.wavelet_EICppm.value(), filterLine=str(self.ui.positiveScanEvent.currentText()) if item.data.ionMode=="+" else str(self.ui.negativeScanEvent.currentText()))
 
                                                 peakBorder=[int(math.floor(item.data.peakCenter-2*item.data.peakScale)), int(math.ceil(item.data.peakCenter+2*item.data.peakScale))]
                                                 xlims=[times[max(0, int(math.floor(item.data.peakCenter-5*item.data.peakScale)))]/60., times[min(int(math.floor(item.data.peakCenter+5*item.data.peakScale)), len(times)-1)]/60.] if xlims is None else [min(xlims[0], times[max(0, peakBorder[0])]/60.), max(xlims[1], times[min(peakBorder[1], len(times)-1)]/60.)]
@@ -3993,16 +3993,47 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                     if any([i>0 for i in ints]):
                                                         maxIntInBorder=max(ints)
 
-                                                self.drawPlot(self.ui.pl1, plotIndex=0, x=[t/60. for t in times], y=[e/maxIntInBorder for e in eic], ylab="intensity", useCol=useColi, plot=True, label="%s%.5f/%d"%(item.data.ionMode, mz, item.data.loading))
+                                                self.drawPlot(self.ui.singleEIC, plotIndex=0, x=[t/60. for t in times], y=[e/maxIntInBorder for e in eic], ylab="intensity", useCol=useColi, plot=True, label="%s%.5f/%d"%(item.data.ionMode, mz, item.data.loading))
+
+                                            msScan=self.currentOpenRawFile.getClosestMS1Scan(item.data.rt, filterLine=str(self.ui.positiveScanEvent.currentText()) if item.data.ionMode=="+" else str(self.ui.negativeScanEvent.currentText()))
+                                            self.ui.singleMSScan.twinxs[0].set_title("Scan at Rt %.2f minutes (id: %d)"%(msScan.retention_time/60, msScan.id))
+
+
+
+
+
+                                            self.ui.singleMSScan.twinxs[0].stem(msScan.mz_list, msScan.intensity_list, linefmt="slategrey", markerfmt=" ", use_line_collection=True)
+
+                                            plotInd=[]
+                                            for refmz in mzs:
+                                                for mzInd, mz in enumerate(msScan.mz_list):
+                                                    if abs(refmz-mz)*1000000/mz<self.ui.ppmRangeIdentification.value():
+                                                        plotInd.append(mzInd)
+                                            cisosInd=[]
+                                            for mzInd, mz in enumerate(msScan.mz_list):
+                                                for u in range(30):
+                                                    if abs(item.data.mz - u * 1.00335484 - mz) * 1000000 / mz < self.ui.ppmRangeIdentification.value() or \
+                                                       abs(item.data.mz + u * 1.00335484 - mz) * 1000000 / mz < self.ui.ppmRangeIdentification.value() or \
+                                                       abs(item.data.mz + u * 1.00335484/2. - mz) * 1000000 / mz < self.ui.ppmRangeIdentification.value() or \
+                                                       abs(item.data.mz - u * 1.00335484 / 2. - mz) * 1000000 / mz < self.ui.ppmRangeIdentification.value():
+                                                        cisosInd.append(mzInd)
+
+                                            if len(cisosInd)>0:
+                                                markerline, stemlines, baseline = self.ui.singleMSScan.twinxs[0].stem([msScan.mz_list[i] for i in cisosInd], [msScan.intensity_list[i] for i in cisosInd], linefmt="Firebrick", markerfmt=" ", use_line_collection=True)
+                                                plt.setp(stemlines, "linewidth", 1.5)
+                                            if len(plotInd)>0:
+                                                markerline, stemlines, baseline = self.ui.singleMSScan.twinxs[0].stem([msScan.mz_list[i] for i in plotInd], [msScan.intensity_list[i] for i in plotInd], linefmt="Firebrick", use_line_collection=True)
+                                                plt.setp(stemlines, "linewidth", 3)
 
                                             useColi += 1
 
 
         if xlims is not None and self.ui.autoZoomPlot.isChecked():
-            self.setLimts(self.ui.pl1, xlim=xlims)
+            self.setLimts(self.ui.singleEIC, xlim=xlims)
         if self.ui.scaleFeatures.isChecked():
-            self.setLimts(self.ui.pl1, ylim=[-0.05, 1.05])
-        self.drawCanvas(self.ui.pl1)
+            self.setLimts(self.ui.singleEIC, ylim=[-0.05, 1.05])
+        self.drawCanvas(self.ui.singleEIC)
+        self.drawCanvas(self.ui.singleMSScan)
 
 
 
@@ -5373,7 +5404,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.pl_tic.fig = Figure((5.0, 4.0), dpi=self.ui.pl_tic.dpi, facecolor='white')
         self.ui.pl_tic.fig.subplots_adjust(left=0.05, bottom=0.05, right=0.99, top=0.95)
         self.ui.pl_tic.canvas = FigureCanvas(self.ui.pl_tic.fig)
-        self.ui.pl_tic.canvas.setParent(self.ui.visualizationWidget)
+        self.ui.pl_tic.canvas.setParent(self.ui.visualization_singleFile_EIC)
         self.ui.pl_tic.axes = self.ui.pl_tic.fig.add_subplot(111)
         simpleaxis(self.ui.pl_tic.axes)
         self.ui.pl_tic.twinxs = [self.ui.pl_tic.axes]
@@ -5390,21 +5421,21 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         #Setup first plot
         #http://eli.thegreenplace.net/2009/01/20/matplotlib-with-pyqt-guis/
-        self.ui.pl1 = QtCore.QObject()
-        self.ui.pl1.dpi = 50
-        self.ui.pl1.fig = Figure((5.0, 4.0), dpi=self.ui.pl1.dpi, facecolor='white')
-        self.ui.pl1.fig.subplots_adjust(left=0.05, bottom=0.1, right=0.99, top=0.95)
-        self.ui.pl1.canvas = FigureCanvas(self.ui.pl1.fig)
-        self.ui.pl1.canvas.setParent(self.ui.visualizationWidget)
-        self.ui.pl1.axes = self.ui.pl1.fig.add_subplot(111)
-        simpleaxis(self.ui.pl1.axes)
-        self.ui.pl1.twinxs = [self.ui.pl1.axes]
-        self.ui.pl1.mpl_toolbar = NavigationToolbar(self.ui.pl1.canvas, self.ui.visualizationWidget)
+        self.ui.singleEIC = QtCore.QObject()
+        self.ui.singleEIC.dpi = 50
+        self.ui.singleEIC.fig = Figure((5.0, 4.0), dpi=self.ui.singleEIC.dpi, facecolor='white')
+        self.ui.singleEIC.fig.subplots_adjust(left=0.05, bottom=0.1, right=0.99, top=0.95)
+        self.ui.singleEIC.canvas = FigureCanvas(self.ui.singleEIC.fig)
+        self.ui.singleEIC.canvas.setParent(self.ui.visualization_singleFile_EIC)
+        self.ui.singleEIC.axes = self.ui.singleEIC.fig.add_subplot(111)
+        simpleaxis(self.ui.singleEIC.axes)
+        self.ui.singleEIC.twinxs = [self.ui.singleEIC.axes]
+        self.ui.singleEIC.mpl_toolbar = NavigationToolbar(self.ui.singleEIC.canvas, self.ui.visualization_singleFile_EIC)
 
         vbox = QtGui.QVBoxLayout()
-        vbox.addWidget(self.ui.pl1.mpl_toolbar)
-        vbox.addWidget(self.ui.pl1.canvas)
-        self.ui.visualizationWidget.setLayout(vbox)
+        vbox.addWidget(self.ui.singleEIC.mpl_toolbar)
+        vbox.addWidget(self.ui.singleEIC.canvas)
+        self.ui.visualization_singleFile_EIC.setLayout(vbox)
 
         #setup second plot2
         self.ui.pl2A = QtCore.QObject()
@@ -5445,22 +5476,22 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.pl2BWidget.setLayout(vbox)
 
         #setup third plot
-        self.ui.pl3 = QtCore.QObject()
-        self.ui.pl3.type = None
-        self.ui.pl3.dpi = 50
-        self.ui.pl3.fig = Figure((5.0, 4.0), dpi=self.ui.pl3.dpi, facecolor='white')
-        self.ui.pl3.fig.subplots_adjust(left=0.05, bottom=0.1, right=0.99, top=0.95)
-        self.ui.pl3.canvas = FigureCanvas(self.ui.pl3.fig)
-        self.ui.pl3.canvas.setParent(self.ui.visualizationWidget3)
-        self.ui.pl3.axes = self.ui.pl3.fig.add_subplot(111)
-        simpleaxis(self.ui.pl3.axes)
-        self.ui.pl3.twinxs = [self.ui.pl3.axes]
-        self.ui.pl3.mpl_toolbar = NavigationToolbar(self.ui.pl3.canvas, self.ui.visualizationWidget3)
+        self.ui.singleMSScan = QtCore.QObject()
+        self.ui.singleMSScan.type = None
+        self.ui.singleMSScan.dpi = 50
+        self.ui.singleMSScan.fig = Figure((5.0, 4.0), dpi=self.ui.singleMSScan.dpi, facecolor='white')
+        self.ui.singleMSScan.fig.subplots_adjust(left=0.05, bottom=0.1, right=0.99, top=0.95)
+        self.ui.singleMSScan.canvas = FigureCanvas(self.ui.singleMSScan.fig)
+        self.ui.singleMSScan.canvas.setParent(self.ui.visualization_singleFile_MSScan)
+        self.ui.singleMSScan.axes = self.ui.singleMSScan.fig.add_subplot(111)
+        simpleaxis(self.ui.singleMSScan.axes)
+        self.ui.singleMSScan.twinxs = [self.ui.singleMSScan.axes]
+        self.ui.singleMSScan.mpl_toolbar = NavigationToolbar(self.ui.singleMSScan.canvas, self.ui.visualization_singleFile_MSScan)
 
         vbox = QtGui.QVBoxLayout()
-        vbox.addWidget(self.ui.pl3.canvas)
-        vbox.addWidget(self.ui.pl3.mpl_toolbar)
-        self.ui.visualizationWidget3.setLayout(vbox)
+        vbox.addWidget(self.ui.singleMSScan.canvas)
+        vbox.addWidget(self.ui.singleMSScan.mpl_toolbar)
+        self.ui.visualization_singleFile_MSScan.setLayout(vbox)
 
         #Setup experiment plot - overlaid EICs plot
         #http://eli.thegreenplace.net/2009/01/20/matplotlib-with-pyqt-guis/
@@ -5469,11 +5500,11 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.resultsExperiment_plot.fig = Figure((5.0, 4.0), dpi=self.ui.resultsExperiment_plot.dpi, facecolor='white')
         self.ui.resultsExperiment_plot.fig.subplots_adjust(left=0.05, bottom=0.05, right=0.99, top=0.95)
         self.ui.resultsExperiment_plot.canvas = FigureCanvas(self.ui.resultsExperiment_plot.fig)
-        self.ui.resultsExperiment_plot.canvas.setParent(self.ui.visualizationWidget)
+        self.ui.resultsExperiment_plot.canvas.setParent(self.ui.visualization_singleFile_EIC)
         self.ui.resultsExperiment_plot.axes = self.ui.resultsExperiment_plot.fig.add_subplot(111)
         simpleaxis(self.ui.resultsExperiment_plot.axes)
         self.ui.resultsExperiment_plot.twinxs = [self.ui.resultsExperiment_plot.axes]
-        self.ui.resultsExperiment_plot.mpl_toolbar = NavigationToolbar(self.ui.resultsExperiment_plot.canvas, self.ui.visualizationWidget)
+        self.ui.resultsExperiment_plot.mpl_toolbar = NavigationToolbar(self.ui.resultsExperiment_plot.canvas, self.ui.visualization_singleFile_EIC)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(self.ui.resultsExperiment_plot.canvas)
@@ -5487,11 +5518,11 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.resultsExperimentSeparatedPeaks_plot.fig = Figure((5.0, 4.0), dpi=self.ui.resultsExperimentSeparatedPeaks_plot.dpi, facecolor='white')
         self.ui.resultsExperimentSeparatedPeaks_plot.fig.subplots_adjust(left=0.05, bottom=0.05, right=0.99, top=0.95)
         self.ui.resultsExperimentSeparatedPeaks_plot.canvas = FigureCanvas(self.ui.resultsExperimentSeparatedPeaks_plot.fig)
-        self.ui.resultsExperimentSeparatedPeaks_plot.canvas.setParent(self.ui.visualizationWidget)
+        self.ui.resultsExperimentSeparatedPeaks_plot.canvas.setParent(self.ui.visualization_singleFile_EIC)
         self.ui.resultsExperimentSeparatedPeaks_plot.axes = self.ui.resultsExperimentSeparatedPeaks_plot.fig.add_subplot(111)
         simpleaxis(self.ui.resultsExperimentSeparatedPeaks_plot.axes)
         self.ui.resultsExperimentSeparatedPeaks_plot.twinxs = [self.ui.resultsExperimentSeparatedPeaks_plot.axes]
-        self.ui.resultsExperimentSeparatedPeaks_plot.mpl_toolbar = NavigationToolbar(self.ui.resultsExperimentSeparatedPeaks_plot.canvas, self.ui.visualizationWidget)
+        self.ui.resultsExperimentSeparatedPeaks_plot.mpl_toolbar = NavigationToolbar(self.ui.resultsExperimentSeparatedPeaks_plot.canvas, self.ui.visualization_singleFile_EIC)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(self.ui.resultsExperimentSeparatedPeaks_plot.canvas)
@@ -5505,11 +5536,11 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.resultsExperimentMSScanPeaks_plot.fig = Figure((5.0, 4.0), dpi=self.ui.resultsExperimentMSScanPeaks_plot.dpi, facecolor='white')
         self.ui.resultsExperimentMSScanPeaks_plot.fig.subplots_adjust(left=0.05, bottom=0.05, right=0.99, top=0.95)
         self.ui.resultsExperimentMSScanPeaks_plot.canvas = FigureCanvas(self.ui.resultsExperimentMSScanPeaks_plot.fig)
-        self.ui.resultsExperimentMSScanPeaks_plot.canvas.setParent(self.ui.visualizationWidget)
+        self.ui.resultsExperimentMSScanPeaks_plot.canvas.setParent(self.ui.visualization_singleFile_EIC)
         self.ui.resultsExperimentMSScanPeaks_plot.axes = self.ui.resultsExperimentMSScanPeaks_plot.fig.add_subplot(111)
         simpleaxis(self.ui.resultsExperimentMSScanPeaks_plot.axes)
         self.ui.resultsExperimentMSScanPeaks_plot.twinxs = [self.ui.resultsExperimentMSScanPeaks_plot.axes]
-        self.ui.resultsExperimentMSScanPeaks_plot.mpl_toolbar = NavigationToolbar(self.ui.resultsExperimentMSScanPeaks_plot.canvas, self.ui.visualizationWidget)
+        self.ui.resultsExperimentMSScanPeaks_plot.mpl_toolbar = NavigationToolbar(self.ui.resultsExperimentMSScanPeaks_plot.canvas, self.ui.visualization_singleFile_EIC)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(self.ui.resultsExperimentMSScanPeaks_plot.canvas)
