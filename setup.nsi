@@ -1,4 +1,4 @@
-!define APP_NAME "MetExtractII"
+!define APP_NAME "CPExtract"
 !define INSTDIR_REG_ROOT "HKLM"
 !define INSTDIR_REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 !include "AdvUninstLog.nsh"
@@ -24,9 +24,8 @@ FunctionEnd
 RequestExecutionLevel user
 
 # name the installer
-OutFile "Setup.exe" 
-#InstallDir "$PROGRAMFILES32\MetExtractII\"
-InstallDir "$LOCALAPPDATA\MetExtractII\$$METEXTRACTVERSION$$"
+OutFile "Setup.exe"
+InstallDir "$LOCALAPPDATA\CPExtract\$$CPEXTRACTVERSION$$"
 ShowInstDetails show
 ShowUnInstDetails show 
 
@@ -47,25 +46,25 @@ Section "instfiles"
     # Create uninstaller
     WriteUninstaller "$INSTDIR\Uninstall.exe"
     
-    # Copy MetExtract II
+    # Copy CPExtract
     SetOutPath $INSTDIR
     
     !insertmacro UNINSTALL.LOG_OPEN_INSTALL
     
     
-    File /r "PyMetExtract_$$METEXTRACTVERSION$$\"
+    File /r "CPExtract_$$CPEXTRACTVERSION$$\"
 
     # SetShellVarContext all
-    CreateDirectory "$SMPROGRAMS\MetExtractII\$$METEXTRACTVERSION$$"
-    CreateShortCut "$SMPROGRAMS\MetExtractII\$$METEXTRACTVERSION$$\MetExtract II $$METEXTRACTVERSION$$.lnk" "$INSTDIR\MetExtractII_Main.exe"
-    # CreateShortCut "$SMPROGRAMS\MetExtractII\$$METEXTRACTVERSION$$\Sample data.lnk" "$INSTDIR\sampleData"
-    CreateShortCut "$SMPROGRAMS\MetExtractII\$$METEXTRACTVERSION$$\Documentation.lnk" "$INSTDIR\documentation\index.html"
+    CreateDirectory "$SMPROGRAMS\CPExtract\$$CPEXTRACTVERSION$$"
+    CreateShortCut "$SMPROGRAMS\CPExtract\$$CPEXTRACTVERSION$$\CPExtract $$CPEXTRACTVERSION$$.lnk" "$INSTDIR\CPExtract.exe"
+    # CreateShortCut "$SMPROGRAMS\CPExtract\$$CPEXTRACTVERSION$$\Sample data.lnk" "$INSTDIR\sampleData"
+    #CreateShortCut "$SMPROGRAMS\CPExtract\$$CPEXTRACTVERSION$$\Documentation.lnk" "$INSTDIR\documentation\index.html"
     
-    CreateShortCut "$SMPROGRAMS\MetExtractII\$$METEXTRACTVERSION$$\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+    CreateShortCut "$SMPROGRAMS\CPExtract\$$CPEXTRACTVERSION$$\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
     
     MessageBox MB_YESNO "Do you want to create a shortcut on the desktop?" /SD IDYES IDNO endDesktopIcon
 
-        CreateShortCut "$DESKTOP\MetExtract II $$METEXTRACTVERSION$$.lnk" "$INSTDIR\MetExtractII_Main.exe"
+        CreateShortCut "$DESKTOP\CPExtract $$CPEXTRACTVERSION$$.lnk" "$INSTDIR\CPExtract.exe"
             
     endDesktopIcon:
     
@@ -103,9 +102,9 @@ Section "uninstall"
     DeleteRegKey /ifempty ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
   
     # second, remove the links from the start menu
-    RmDir /r "$SMPROGRAMS\MetExtractII $$METEXTRACTVERSION$$"
+    RmDir /r "$SMPROGRAMS\CPExtract $$CPEXTRACTVERSION$$"
 
-    delete "$DESKTOP\MetExtract II $$METEXTRACTVERSION$$.lnk"
+    delete "$DESKTOP\CPExtract $$CPEXTRACTVERSION$$.lnk"
  
 # uninstaller section end
 SectionEnd

@@ -3942,8 +3942,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         ## Clean old illustrations
         self.clearPlot(self.ui.singleEIC)
-        self.clearPlot(self.ui.pl2A)
-        self.clearPlot(self.ui.pl2B)
         self.clearPlot(self.ui.singleMSScan)
         for i in range(self.ui.res_ExtractedData.topLevelItemCount()):
             self.deColorQTreeWidgetItem(self.ui.res_ExtractedData.topLevelItem(i))
@@ -3957,7 +3955,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         ## Set some variables
         useColi = 0
         fT=formulaTools()
-        xlims=None
+        xlimsEICs=None
+        xlimsMSScan=[1E8,0]
+        ylimsMSScan=[1E12,0]
 
 
         ## iterate selected items
@@ -3969,15 +3969,14 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             elif item.type == "Features" or item.type == "feature":
 
-                                            #xp = Bunch(id=row.id, mz=float(row.mz), peakCenter=row.PeakCenter,
-                                            #           rt=row.PeakCenterMin, peakScale=row.PeakScale, loading=row.loading,
-                                            #           ionMode=row.ionMode, peakArea=row.PeakArea, foundMatches={"[13C]-2": Bunch(peakRightFlank,peakIndex,peaksRatio,peakScale,peakArea,artificialShift,peakLeftFlank,peaksCorr,peakSNR})
+                                            ## Set column names
                                             self.ui.chromPeakName.setText("")
-
                                             self.ui.res_ExtractedData.setHeaderLabels(QtCore.QStringList(
                                                 ["MZ (/Ionmode Z)", "Rt min", "Xn", "Adducts / in-source fragments / hetero atoms", "Scale M / M'", "Peak cor", "M:M' peaks ratio / area ratio", "Area M / M'", "Scans", "LMZ", "Tracer"]))
 
 
+
+                                            ## Show EICs of all detected chromatographic peaks
                                             mzs=[item.data.mz]
                                             for childi in range(item.childCount()):
                                                 child=item.child(childi)
@@ -3986,7 +3985,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                 eic, times, scanIds, gg=self.currentOpenRawFile.getEIC(mz, ppm=self.ui.wavelet_EICppm.value(), filterLine=str(self.ui.positiveScanEvent.currentText()) if item.data.ionMode=="+" else str(self.ui.negativeScanEvent.currentText()))
 
                                                 peakBorder=[int(math.floor(item.data.peakCenter-2*item.data.peakScale)), int(math.ceil(item.data.peakCenter+2*item.data.peakScale))]
-                                                xlims=[times[max(0, int(math.floor(item.data.peakCenter-5*item.data.peakScale)))]/60., times[min(int(math.floor(item.data.peakCenter+5*item.data.peakScale)), len(times)-1)]/60.] if xlims is None else [min(xlims[0], times[max(0, peakBorder[0])]/60.), max(xlims[1], times[min(peakBorder[1], len(times)-1)]/60.)]
+                                                xlimsEICs=[times[max(0, int(math.floor(item.data.peakCenter-5*item.data.peakScale)))]/60., times[min(int(math.floor(item.data.peakCenter+5*item.data.peakScale)), len(times)-1)]/60.] if xlimsEICs is None else [min(xlimsEICs[0], times[max(0, peakBorder[0])]/60.), max(xlimsEICs[1], times[min(peakBorder[1], len(times)-1)]/60.)]
                                                 maxIntInBorder=1
                                                 if self.ui.scaleFeatures.isChecked():
                                                     ints=eic[peakBorder[0]:peakBorder[1]]
@@ -3994,21 +3993,22 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                         maxIntInBorder=max(ints)
 
                                                 self.drawPlot(self.ui.singleEIC, plotIndex=0, x=[t/60. for t in times], y=[e/maxIntInBorder for e in eic], ylab="intensity", useCol=useColi, plot=True, label="%s%.5f/%d"%(item.data.ionMode, mz, item.data.loading))
+                                            self.ui.singleEIC.twinxs[0].set_title("EICs of feature %.5f, Rt %.2f, %s"%(item.data.mz, item.data.rt, str(self.ui.positiveScanEvent.currentText()) if item.data.ionMode=="+" else str(self.ui.negativeScanEvent.currentText())))
 
+
+                                            ## Show MS scan in the chromatographic peak's center
                                             msScan=self.currentOpenRawFile.getClosestMS1Scan(item.data.rt, filterLine=str(self.ui.positiveScanEvent.currentText()) if item.data.ionMode=="+" else str(self.ui.negativeScanEvent.currentText()))
                                             self.ui.singleMSScan.twinxs[0].set_title("Scan at Rt %.2f minutes (id: %d)"%(msScan.retention_time/60, msScan.id))
-
-
-
-
 
                                             self.ui.singleMSScan.twinxs[0].stem(msScan.mz_list, msScan.intensity_list, linefmt="slategrey", markerfmt=" ", use_line_collection=True)
 
                                             plotInd=[]
                                             for refmz in mzs:
+                                                xlimsMSScan=[min(xlimsMSScan[0], refmz), max(xlimsMSScan[1], refmz)]
                                                 for mzInd, mz in enumerate(msScan.mz_list):
                                                     if abs(refmz-mz)*1000000/mz<self.ui.ppmRangeIdentification.value():
                                                         plotInd.append(mzInd)
+                                                        ylimsMSScan=[min(ylimsMSScan[0], 0), max(ylimsMSScan[1], msScan.intensity_list[mzInd])]
                                             cisosInd=[]
                                             for mzInd, mz in enumerate(msScan.mz_list):
                                                 for u in range(30):
@@ -4022,17 +4022,20 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                                 markerline, stemlines, baseline = self.ui.singleMSScan.twinxs[0].stem([msScan.mz_list[i] for i in cisosInd], [msScan.intensity_list[i] for i in cisosInd], linefmt="Firebrick", markerfmt=" ", use_line_collection=True)
                                                 plt.setp(stemlines, "linewidth", 1.5)
                                             if len(plotInd)>0:
-                                                markerline, stemlines, baseline = self.ui.singleMSScan.twinxs[0].stem([msScan.mz_list[i] for i in plotInd], [msScan.intensity_list[i] for i in plotInd], linefmt="Firebrick", use_line_collection=True)
+                                                markerline, stemlines, baseline = self.ui.singleMSScan.twinxs[0].stem([msScan.mz_list[i] for i in plotInd], [msScan.intensity_list[i] for i in plotInd], linefmt="Firebrick", markerfmt=" ", use_line_collection=True)
                                                 plt.setp(stemlines, "linewidth", 3)
+
+
 
                                             useColi += 1
 
 
-        if xlims is not None and self.ui.autoZoomPlot.isChecked():
-            self.setLimts(self.ui.singleEIC, xlim=xlims)
+        if xlimsEICs is not None and self.ui.autoZoomPlot.isChecked():
+            self.setLimits(self.ui.singleEIC, xlim=xlimsEICs)
         if self.ui.scaleFeatures.isChecked():
-            self.setLimts(self.ui.singleEIC, ylim=[-0.05, 1.05])
+            self.setLimits(self.ui.singleEIC, ylim=[0, 1.05])
         self.drawCanvas(self.ui.singleEIC)
+        self.setLimits(self.ui.singleMSScan, xlim=(xlimsMSScan[0] * 0.95, xlimsMSScan[1] * 1.05), ylim=(ylimsMSScan[0] * 0.95, ylimsMSScan[1] * 1.05))
         self.drawCanvas(self.ui.singleMSScan)
 
 
@@ -4058,34 +4061,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
 
     #<editor-fold desc="### general plotting functions">
-    def addArrow(self, plt, point, at, plotIndex=0, fcColor="white", ecColor="white", arrowColor="slategrey", alpha=1,
-                 arrowAlpha=1, drawArrowHead=False, linewidth=1):
-
-        if point != at:
-            if not drawArrowHead:
-                plt.twinxs[plotIndex].arrow(at[0], at[1], point[0] - at[0], point[1] - at[1], color=ecColor,
-                                            shape="right", head_width=(point[0] - at[0]) * 0.3,
-                                            head_length=(point[1] - at[1]) * 0., linewidth=linewidth)
-            else:
-                plt.twinxs[plotIndex].annotate("", xy=point, xytext=at, xycoords='data', textcoords='data', va="center",
-                                               ha="center",
-                                               bbox=dict(boxstyle='round', fc=fcColor, ec=ecColor, alpha=alpha),
-                                               rotation=0, arrowprops=dict(arrowstyle="->", connectionstyle='arc3',
-                                                                           color=arrowColor, alpha=arrowAlpha))
-
-    def addCircle(self, plt, at, plotIndex):
-        pass
-
-    def addAnnotation(self, plt, text, point, at, plotIndex=0, rotation=0, arrowAlpha=0.5, offset=(-10, 80),
-                      fcColor="white", ecColor="white", arrowColor="firebrick", alpha=0.8, up=True, add=80):
-        if not up:
-            add = -add
-        plt.twinxs[plotIndex].annotate(text, xy=point, xytext=(-10, add), xycoords='data', textcoords='offset points',
-                                       va="center", ha="center",
-                                       bbox=dict(boxstyle='round', fc=fcColor, ec=ecColor, alpha=alpha),
-                                       rotation=rotation,
-                                       arrowprops=dict(arrowstyle='wedge', color=arrowColor, alpha=arrowAlpha))
-
     def clearPlot(self, plt, setXtoZero=False):
         for ax in plt.twinxs:
             plt.fig.delaxes(ax)
@@ -4153,7 +4128,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         ax = plt.twinxs[plotIndex]
         ax.scatter(x,y)
 
-    def setLimts(self, plt, ylim=None, xlim=None):
+    def setLimits(self, plt, ylim=None, xlim=None):
         for ax in plt.twinxs:
             if ylim is not None:
                 ax.set_ylim(ylim[0], ylim[1])
@@ -5128,7 +5103,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
 
     # initialise main interface, triggers and command line parameters
-    def __init__(self, module="TracExtract", parent=None, silent=False):
+    def __init__(self, module="CPExtract", parent=None, silent=False):
         super(Ui_MainWindow, self).__init__()
         QtGui.QMainWindow.__init__(self, parent)
         self.ui = Ui_MainWindow()
@@ -5296,7 +5271,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.workingCore.toggled.connect(self.updateCores)
 
         self.ui.tabWidget.setCurrentIndex(0)
-        self.ui.tabWidget_2.setCurrentIndex(0)
 
         self.ui.isotopeAText.textChanged.connect(self.isotopeATextChanged)
         self.ui.isotopeBText.textChanged.connect(self.isotopeBTextChanged)
@@ -5437,44 +5411,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         vbox.addWidget(self.ui.singleEIC.canvas)
         self.ui.visualization_singleFile_EIC.setLayout(vbox)
 
-        #setup second plot2
-        self.ui.pl2A = QtCore.QObject()
-        self.ui.pl2A.type = None
-        self.ui.pl2A.dpi = 50
-        self.ui.pl2A.fig = Figure((5.0, 4.0), dpi=self.ui.pl2A.dpi, facecolor='white')
-        self.ui.pl2A.fig.subplots_adjust(left=0.15, bottom=0.05, right=0.99, top=0.85)
-        self.ui.pl2A.canvas = FigureCanvas(self.ui.pl2A.fig)
-        self.ui.pl2A.canvas.setParent(self.ui.pl2AWidget)
-        self.ui.pl2A.axes = self.ui.pl2A.fig.add_subplot(111)
-        #noaxis(self.ui.pl2A.axes)
-        self.ui.pl2A.twinxs = [self.ui.pl2A.axes]
-        self.ui.pl2A.mpl_toolbar = NavigationToolbar(self.ui.pl2A.canvas, self.ui.pl2AWidget)
-        self.ui.pl2A.pictureShown = False
-
-        vbox = QtGui.QVBoxLayout()
-        vbox.addWidget(self.ui.pl2A.canvas)
-        vbox.addWidget(self.ui.pl2A.mpl_toolbar)
-        self.ui.pl2AWidget.setLayout(vbox)
-
-
-        self.ui.pl2B = QtCore.QObject()
-        self.ui.pl2B.type = None
-        self.ui.pl2B.dpi = 50
-        self.ui.pl2B.fig = Figure((5.0, 4.0), dpi=self.ui.pl2B.dpi, facecolor='white')
-        self.ui.pl2B.fig.subplots_adjust(left=0.15, bottom=0.05, right=0.99, top=0.85)
-        self.ui.pl2B.canvas = FigureCanvas(self.ui.pl2B.fig)
-        self.ui.pl2B.canvas.setParent(self.ui.pl2BWidget)
-        self.ui.pl2B.axes = self.ui.pl2B.fig.add_subplot(111)
-        #noaxis(self.ui.pl2B.axes)
-        self.ui.pl2B.twinxs = [self.ui.pl2B.axes]
-        self.ui.pl2B.mpl_toolbar = NavigationToolbar(self.ui.pl2B.canvas, self.ui.pl2BWidget)
-        self.ui.pl2B.pictureShown = False
-
-        vbox = QtGui.QVBoxLayout()
-        vbox.addWidget(self.ui.pl2B.canvas)
-        vbox.addWidget(self.ui.pl2B.mpl_toolbar)
-        self.ui.pl2BWidget.setLayout(vbox)
-
         #setup third plot
         self.ui.singleMSScan = QtCore.QObject()
         self.ui.singleMSScan.type = None
@@ -5489,8 +5425,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.singleMSScan.mpl_toolbar = NavigationToolbar(self.ui.singleMSScan.canvas, self.ui.visualization_singleFile_MSScan)
 
         vbox = QtGui.QVBoxLayout()
-        vbox.addWidget(self.ui.singleMSScan.canvas)
         vbox.addWidget(self.ui.singleMSScan.mpl_toolbar)
+        vbox.addWidget(self.ui.singleMSScan.canvas)
         self.ui.visualization_singleFile_MSScan.setLayout(vbox)
 
         #Setup experiment plot - overlaid EICs plot
@@ -5547,11 +5483,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         vbox.addWidget(self.ui.resultsExperimentMSScanPeaks_plot.mpl_toolbar)
         self.ui.resultsExperimentMSScan_widget.setLayout(vbox)
 
-        self.ui.pl2A.xics = []
-        self.ui.pl2A.times = []
-        self.ui.pl2A.peaks = []
-        self.ui.pl2A.x_vals = []
-        self.ui.pl2A.y_vals = []
 
         font = {'size': 18}
         matplotlib.rc('font', **font)
@@ -5643,8 +5574,8 @@ if __name__ == '__main__':
 
     # parse supplied options
     parser = OptionParser()
-    parser.add_option("-m", "--module", dest="module", default="TracExtract", metavar="MODULE",
-                      help="Select 'AllExtract' or 'TracExtract' module (default TracExtract)")
+    parser.add_option("-m", "--module", dest="module", default="CPExtract", metavar="MODULE",
+                      help="Select 'CPExtract' or 'CPExtract' module (default CPExtract)")
     parser.add_option("-g", "--groupFile", dest="groupdest", default=None, metavar="GROUP-FILE",
                       help="Load group compilation (use -l group to load associated settings automatically)")
     parser.add_option("-l", "--settingsFile", dest="settings", default=None, metavar="SETTINGS-FILE",

@@ -38,7 +38,7 @@ from multiprocessing import cpu_count
 from mePyGuis.ProgressWrapper import ProgressWrapper
 from mePyGuis.adductsEdit import adductsEdit, ConfiguredElement, ConfiguredAdduct
 
-from MExtract import MetExtractVersion
+from CPExtract import MetExtractVersion
 
 import formulaTools
 

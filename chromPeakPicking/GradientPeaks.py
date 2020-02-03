@@ -331,7 +331,7 @@ if __name__=="__main__":
 
 
 
-    import MExtract
+    import CPExtract
     from MassSpecWavelet import MassSpecWavelet
 
     cp=MassSpecWavelet("./MassSpecWaveletIdentification.R")

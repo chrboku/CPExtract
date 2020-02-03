@@ -405,7 +405,7 @@ def processFile(file, columns, adducts, ppm=5., ppmCorrection=0, useAtoms=[], at
     calcSFs=x.calcObjects
 
 
-    from MExtract import getCallStr, genSFs, calcSumFormulas
+    from CPExtract import getCallStr, genSFs, calcSumFormulas
 
     pool = multiprocessing.Pool(processes=nCores, maxtasksperchild=1)
     pool.map(calcSumFormulas, calcSFs)

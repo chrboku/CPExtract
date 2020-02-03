@@ -1,6 +1,6 @@
 
 if __name__=="__main__":
-    import MExtract
+    import CPExtract
 
 import rpy2
 import rpy2.robjects as ro

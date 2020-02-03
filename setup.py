@@ -30,6 +30,7 @@ import matplotlib
 
 import sys
 sys.path.append("../PyMassBankSearchTool")
+sys.setrecursionlimit(5000)
 from TableUtils import TableUtils
 
 
@@ -212,14 +213,12 @@ class Target:
     def __init__(self, **kw):
         self.__dict__.update(kw)
 
-a=Target(script = "MetExtractII_Main.py")
-b=Target(script = "FragExtract.py")
-c=Target(script = "MExtract.py")
+c=Target(script = "CPExtract.py")
 
 print "###################################################"
 print "########## Packing MetExtractII_Main"
 print "###################################################"
-setup(console=[a,b,c],
+setup(console=[c],
       options={"py2exe": {
                  "includes": ["sip", "matplotlib.backends.backend_tkagg", 'scipy', 'scipy.integrate', 'scipy.special.*','scipy.linalg.*', 'scipy.sparse.csgraph._validation'],  # use this line if above does not work
                  "dll_excludes": ["MSVCP90.dll", "api-ms-win-core-string-l1-1-0.dll","api-ms-win-core-registry-l1-1-0.dll","api-ms-win-core-errorhandling-l1-1-0.dll","api-ms-win-core-string-l2-1-0.dll",
@@ -227,7 +226,7 @@ setup(console=[a,b,c],
                                   "api-ms-win-security-base-l1-2-0.dll","api-ms-win-eventing-provider-l1-1-0.dll","api-ms-win-core-heap-l2-1-0.dll","api-ms-win-core-libraryloader-l1-2-0.dll","api-ms-win-core-localization-l1-2-1.dll",
                                   "api-ms-win-core-sysinfo-l1-1-0.dll","api-ms-win-core-synch-l1-2-0.dll","api-ms-win-core-heap-l1-2-0.dll","api-ms-win-core-handle-l1-1-0.dll","api-ms-win-core-io-l1-1-1.dll","api-ms-win-core-com-l1-1-1.dll",
                                   "api-ms-win-core-memory-l1-1-2.dll","api-ms-win-core-version-l1-1-1.dll","api-ms-win-core-version-l1-1-0.dll","api-ms-win-core-processthreads-l1-1-0.dll"],
-                 "excludes": ["_gtkagg", "_tkagg"],
+                 "excludes": ["_gtkagg", "_tkagg", 'jinja2.asyncsupport','jinja2.asyncfilters'],
                  "packages": ["FileDialog", "openpyxl", 'reportlab','reportlab.graphics.charts','reportlab.graphics.samples','reportlab.graphics.widgets','reportlab.graphics.barcode','reportlab.graphics','reportlab.lib','reportlab.pdfbase','reportlab.pdfgen','reportlab.platypus', 'zeep', 'lxml'],
                  'dist_dir': "./dist"
       }},
@@ -247,11 +246,6 @@ print "Setup finished\n==============================\n"
 try:
     os.makedirs("./dist/Settings/")
     copy("./Settings/defaultSettings.ini", "./dist/Settings/defaultSettings.ini")
-    copy("./Settings/LTQ-Orbitrap-XL__HPLC.ini", "./dist/Settings/LTQ-Orbitrap-XL__HPLC.ini")
-    copy("./Settings/QExactive__HPLC.ini", "./dist/Settings/QExactive__HPLC.ini")
-    copy("./Settings/QTof__HPLC.ini", "./dist/Settings/QTof__HPLC.ini")
-    os.makedirs("./dist/Settings/Tracers/")
-    copy("./Settings/Tracers/DON_12C13C.ini", "./dist/Settings/Tracers/DON_12C13C.ini")
 
     os.makedirs("./dist/chromPeakPicking/")
     copy("./chromPeakPicking/MassSpecWaveletIdentification.r", "./dist/chromPeakPicking/MassSpecWaveletIdentification.r")
@@ -261,6 +255,7 @@ try:
     print "Additional resources copied\n==============================\n"
 except:
     print "Error: Could not copy all required files"
+    sys.exit(1)
     err = True
 
 
@@ -271,36 +266,15 @@ def copyAllFilesInFolder(src, dest):
         full_file_name = os.path.join(src, file_name)
         if (os.path.isfile(full_file_name)):
             shutil.copy(full_file_name, dest)
-try:
-    import shutil
-    dest="./dist/documentation"
-    os.makedirs(dest)
-    src="./documentation"
 
-    copyAllFilesInFolder(src, dest)
-    dest="./dist/documentation/figures/"
-    os.makedirs(dest)
-    src="./documentation/figures"
-    copyAllFilesInFolder(src, dest)
-
-    copy("./help/INSTALL.txt", "./dist/INSTALL.txt")
-
-
-    print "Help files copied\n==============================\n"
-
-except:
-    print "Error: Could not copy help files"
-    err = True
-    import sys
-    sys.exit(1)
 
 # rename dist folder to PyMetExtract and current version of the software
 meDistFolder="./dist"
 try:
     from time import sleep  # sometimes, the re-naming does not work (probably some kind of lock from the OS)
     sleep(3)                # this short waiting time decreases the number of times the renaming does not work
-    os.rename("./dist", "./PyMetExtract_%s"%MetExtractVersion)
-    meDistFolder="./PyMetExtract_%s"%MetExtractVersion
+    os.rename("./dist", "./CPExtract_%s"%MetExtractVersion)
+    meDistFolder="./CPExtract_%s"%MetExtractVersion
     print "Distribution renamed\n==============================\n"
 
 except:
@@ -315,12 +289,12 @@ except:
 import os
 
 ## update MetExtract Version in NSIS setup file
-replaceInFile("$$METEXTRACTVERSION$$", MetExtractVersion, filein="setup.nsi", fileout="setup_curVersion.nsi")
+replaceInFile("$$CPEXTRACTVERSION$$", MetExtractVersion, filein="setup.nsi", fileout="setup_curVersion.nsi")
 
 os.system("\"c:\\Program Files (x86)\\NSIS\\makensis.exe\" setup_curVersion.nsi")
 os.remove("./setup_curVersion.nsi")
-os.rename("./Setup.exe", "./Setup_MetExtractII_%s.exe"%MetExtractVersion)
-move("./Setup_MetExtractII_%s.exe"%MetExtractVersion, "./distribute/Setup_MetExtractII_%s.exe"%MetExtractVersion)
+os.rename("./Setup.exe", "./Setup_CPExtract_%s.exe"%MetExtractVersion)
+move("./Setup_CPExtract_%s.exe"%MetExtractVersion, "./distribute/Setup_CPExtractII_%s.exe"%MetExtractVersion)
 #shutil.copy("../../distribution/vcredist_x86.exe", "./distribute/vcredist_x86.exe")
 
 
@@ -333,7 +307,7 @@ def zipdir(path, zip):
 if not err:
 
     print "Zipping MetExtract (%s)" % MetExtractVersion
-    zipFileName = "PyMetExtract_%s.zip" % MetExtractVersion
+    zipFileName = "PyCPExtract_%s.zip" % MetExtractVersion
 
     zipF = zipfile.ZipFile(zipFileName, 'w')
     zipdir(meDistFolder, zipF)
@@ -341,7 +315,7 @@ if not err:
 
     move('./%s' % zipFileName, './distribute/%s' % zipFileName)
 
-    print "MetExtract (%s) created\n see %s\n==============================\n" % (
+    print "CPExtract (%s) created\n see %s\n==============================\n" % (
         MetExtractVersion, './distribute/%s' % zipFileName)
 
     try:
