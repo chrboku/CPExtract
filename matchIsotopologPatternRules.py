@@ -90,6 +90,71 @@ class AbsenceRule(Rule):
         return "Isotopolog %s is not present or below the limit (%.2f)"%(self.otherIsotopolog, self.maxRatio)
 
 
+
+
+class AnyIntensityRule(Rule):
+    def __init__(self, anyIsotopolog=["X"], minimumIntensity=1E5):
+        self.anyIsotopolog=anyIsotopolog
+        self.minimumIntensity=minimumIntensity
+
+    def getAllRequiredIsotopologs(self):
+        return self.anyIsotopolog
+
+    def check(self, isotopologDict, log=False):
+        ret=False
+
+        for iso in self.anyIsotopolog:
+            if iso in isotopologDict.keys():
+                if isotopologDict[iso].intensity>=self.minimumIntensity:
+                    ret=True
+
+        return ret
+
+    def getMessage(self):
+        return "No isotopolog %s is above the set minimum intensity threshold (%.2f)"%(self.anyIsotopolog, self.minimumIntensity)
+
+
+
+
+class AllIntensityRule(Rule):
+    def __init__(self, allIsotopolog=["X"], minimumIntensity=1E5):
+        self.allIsotopolog=allIsotopolog
+        self.minimumIntensity=minimumIntensity
+
+    def getAllRequiredIsotopologs(self):
+        return self.allIsotopolog
+
+    def check(self, isotopologDict, log=False):
+        ret=True
+
+        for iso in self.allIsotopolog:
+            if iso in isotopologDict.keys():
+                if isotopologDict[iso].intensity<self.minimumIntensity:
+                    ret=False
+
+        return ret
+
+    def getMessage(self):
+        return "All isotopologs %s are below the set minimum intensity threshold (%.2f)"%(self.allIsotopolog, self.minimumIntensity)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class RuleMatcher:
 
     def __init__(self, rules, ppm=5., log=False):
