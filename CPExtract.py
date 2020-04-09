@@ -1533,9 +1533,17 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                         for i in range(len(group.files)):
                             pw.setTextu("Copying "+group.files[i][group.files[i].rfind("/"):])
                             shutil.copy(str(group.files[i]), str(groupFile[:groupFile.rfind("/")]+"/"+text+"/data/"+group.name+group.files[i][group.files[i].rfind("/"):]))
-                            group.files[i]=str(groupFile[:groupFile.rfind("/")]+"/"+text+"/data/"+group.name+group.files[i][group.files[i].rfind("/"):])
+                            group.files[i]=str("./"+text+"/data/"+group.name+group.files[i][group.files[i].rfind("/"):])
                             done=done+1
                             pw.setValueu(done)
+
+                    if self.ui.dbList_listView.model().rowCount()>0:
+                        os.mkdir(str(groupFile[:groupFile.rfind("/")]+"/"+text+"/db"))
+                        for entryInd in range(self.ui.dbList_listView.model().rowCount()):
+                            dbFile = str(self.ui.dbList_listView.model().item(entryInd, 0).data().toString())
+                            dbName = dbFile[dbFile.rfind("/") + 1:]
+                            shutil.copy(dbFile, str(groupFile[:groupFile.rfind("/")]+"/"+text+"/db/"+dbName))
+                            self.ui.dbList_listView.model().item(entryInd, 0).setData(str(groupFile[:groupFile.rfind("/")]+"/"+text+"/db/"+dbName))
 
                     try:
                         pw.setTextu("Zipping current MetExtract II application for documentation")
@@ -3224,6 +3232,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 for entryInd in range(self.ui.dbList_listView.model().rowCount()):
                     dbFile = str(self.ui.dbList_listView.model().item(entryInd, 0).data().toString())
                     dbName = dbFile[dbFile.rfind("/") + 1:dbFile.rfind(".")]
+                    logging.info("Using database %s (from %s)"%(dbName, dbFile))
                     db.addEntriesFromFile(dbName, dbFile)
                     table.addColumn("DBs_"+dbName+"_count", "TEXT")
                     table.addColumn("DBs_"+dbName, "TEXT")
@@ -3257,7 +3266,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
                         rt_min=float(x["RT"])
                         charges=int(x["Charge"])
-                        polarity=x["Ionisation_Mode"]
+                        polarity=x["IonMode"]
                         xn=0
                         try:
                             xn=int(x["Xn"])
@@ -3394,12 +3403,11 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
 
             ## Organize table a bit better
-            impCols=["Num", "OGroup", "Comment", "MZ", "RT", "Xn", "Charge", "Ionisation_Mode", "AverageAbundance_N", "AverageAbundance_L", "RelativeAbundance", "Ion", "Loss", "M", "L_MZ", "D_MZ", "MZ_Range", "RT_Range", "PeakScalesNL", "ScanEvent", "Tracer"]
+            impCols=["Num", "OGroup", "Comment", "MZ", "RT", "Xn", "Charge", "IonMode", "AverageAbundance", "RelativeAbundance", "Ion", "Loss", "M", "MZ_Range", "RT_Range", "PeakScales", "ScanEvent"]
             frontCols=[]
             endCols=[]
             table = TableUtils.readFile(resFileFull)
-            table.addColumn("AverageAbundance_N", "FLOAT", defaultValue=0.)
-            table.addColumn("AverageAbundance_L", "FLOAT", defaultValue=0.)
+            table.addColumn("AverageAbundance", "FLOAT", defaultValue=0.)
             table.addColumn("RelativeAbundance", "TEXT", defaultValue="")
             for col in table.getColumns():
                 nam=str(col.name)
@@ -3438,13 +3446,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 abu={}
                 sum=0
                 for num in numsInGroup:
-                    abundances=table.getData([fi+"_Area_N" for fi in filesForConvolution], where="Num=%d"%num)[0]
+                    abundances=table.getData([fi+"_Area" for fi in filesForConvolution], where="Num=%d"%num)[0]
                     av=mean([ab for ab in abundances if ab!=""])
-                    table.setData(["AverageAbundance_N"], [av], where="Num=%d"%num)
-
-                    abundances=table.getData([fi+"_Area_L" for fi in filesForConvolution], where="Num=%d"%num)[0]
-                    av=mean([ab for ab in abundances if ab!=""])
-                    table.setData(["AverageAbundance_L"], [av], where="Num=%d"%num)
+                    table.setData(["AverageAbundance"], [av], where="Num=%d"%num)
 
                     abu[num]=av
                     sum=sum+av
@@ -4609,7 +4613,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         ppm=self.ui.doubleSpinBox_resultsExperiment_EICppm.value()
         borderOffset=self.ui.doubleSpinBox_resultsExperiment_PeakWidth.value()
         meanRT=[]
-        intlim=[0,0]
+        intlim=[0,1]
 
         mostAbundantFile=None
 
@@ -4620,6 +4624,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             rtBorderMin=pi.rt-borderOffset
             rtBorderMax=pi.rt+borderOffset
 
+            tj=1
             for grpInd, group in enumerate(definedGroups):
                 for i in range(len(group.files)):
                     fi = str(group.files[i]).replace("\\", "/")
@@ -4642,7 +4647,10 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                 maxN=m
 
                         #intlim[0] = min(intlim[0], min([-eicL[j]/maxL for j in range(len(eic)) if rtBorderMin <= times[j] / 60. <= rtBorderMax]))
-                        intlim[1] = max(intlim[1], max([eic[j]/maxN for j in range(len(eic)) if rtBorderMin <= times[j] / 60. <= rtBorderMax]))
+                        try:
+                            intlim[1] = max(intlim[1], max([eic[j]/maxN for j in range(len(eic)) if rtBorderMin <= times[j] / 60. <= rtBorderMax]))
+                        except:
+                            pass
 
                         scan=self.loadedMZXMLs[fi].getClosestMS1Scan(pi.rt, filterLine=pi.scanEvent)
                         peakID=scan.findMZ(pi.mz, ppm=ppm)
@@ -4651,13 +4659,28 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             if mostAbundantFile is None or scan.intensity_list[peakID[0]]>mostAbundantFile[1]:
                                 mostAbundantFile=(fi, scan.intensity_list[peakID[0]], scan, group.color)
 
+
+                        scale=1
+                        self.ui.resultsExperimentMSScanPeaks_plot.axes.text(x=1*tj, y=0, s=a, rotation=90, horizontalalignment='left', color=group.color, backgroundcolor="white")
+                        for ih in range(0, 32):
+                            mz = pi.mz + 1.00335484 * ih
+                            peakID = scan.findMZ(mz, ppm=ppm)
+                            if peakID[0] != -1:
+                                if ih==0:
+                                    scale=scan.intensity_list[peakID[0]]
+                                self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=1*tj+0.05*ih, ymin=0+0.01*ih, ymax=scan.intensity_list[peakID[0]]/scale+0.01*ih, color=group.color, linewidth=2.0)
+                            mz = pi.mz - 1.00335484 * ih
+                            peakID = scan.findMZ(mz, ppm=ppm)
+                            if peakID[0] != -1 and ih!=0:
+                                self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=1*tj+0.05*ih, ymin=0+0.01*ih, ymax=scan.intensity_list[peakID[0]]/scale+0.01*ih, color=group.color, linewidth=2.0)
+
+
                         self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [e/maxN for e in eic], color=group.color, label="M: %s"%(a))
-
                         self.ui.resultsExperimentSeparatedPeaks_plot.axes.plot([t / 60. + grpInd for t in times if rtBorderMin<=t/60.<=rtBorderMax], [eic[j]/maxN for j in range(len(eic)) if rtBorderMin<=times[j]/60.<=rtBorderMax], color=group.color, label="M: %s"%(a))
-
+                    tj=tj+1
 
             maxSigAbundance=0
-            if mostAbundantFile is not None:
+            if mostAbundantFile is not None and False:
 
                 self.ui.resultsExperiment_plot.axes.axvline(x=pi.rt, color=mostAbundantFile[3])
 
@@ -4724,7 +4747,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         intlim=[intlim[0]*1.1, intlim[1]*1.1]
         self.drawCanvas(self.ui.resultsExperiment_plot, xlim=rtlim, ylim=intlim)
         self.drawCanvas(self.ui.resultsExperimentSeparatedPeaks_plot, showLegendOverwrite=False)
-        self.drawCanvas(self.ui.resultsExperimentMSScanPeaks_plot, xlim=[pi.mz-5, pi.mz+15], ylim=[0, maxSigAbundance])
+        self.drawCanvas(self.ui.resultsExperimentMSScanPeaks_plot, xlim=[0, tj+2], ylim=[0, 1.5])
 
 
     def exportAsPDF(self, pdfFile=None):

@@ -20,7 +20,7 @@ exMZ = "MZ"
 exRT = "RT"
 exAccMass = "M"
 exXCount = "Xn"
-exIonMode = "Ionisation_Mode"
+exIonMode = "IonMode"
 exCharge = "Charge"
 
 
@@ -106,18 +106,20 @@ def processFile(file, columns, adducts, ppm=5., ppmCorrection=0, useAtoms=[], at
             else:
                 accMass=""
 
-            xCount = int(x[self.columns[exXCount]])
             atomsRange = deepcopy(self.atomsRange)
             charge = x[self.columns[exCharge]]
             ionMode = x[self.columns[exIonMode]]
 
             if self.useCn.lower()=="exact":
+                xCount = int(x[self.columns[exXCount]])
                 atomsRange[0] = xCount
             elif self.useCn.lower()=="don't use":
                 pass
             elif self.useCn.lower()=="min" or self.useCn.lower()=="minimum":
+                xCount = int(x[self.columns[exXCount]])
                 atomsRange[0]=(xCount, atomsRange[0][1])
             elif self.useCn.lower().startswith("plusminus"):
+                xCount = int(x[self.columns[exXCount]])
                 g=2
                 if len("plusminus_")<len(self.useCn):
                     g=int(self.useCn[len("plusminus_"):])
@@ -177,18 +179,20 @@ def processFile(file, columns, adducts, ppm=5., ppmCorrection=0, useAtoms=[], at
             else:
                 accMass=""
 
-            xCount = int(x[self.columns[exXCount]])
             atomsRange = deepcopy(self.atomsRange)
             charge = x[self.columns[exCharge]]
             ionMode = x[self.columns[exIonMode]]
 
             if self.useCn.lower()=="exact":
+                xCount = int(x[self.columns[exXCount]])
                 atomsRange[0] = xCount
             elif self.useCn.lower()=="don't use":
                 pass
             elif self.useCn.lower()=="min" or self.useCn.lower()=="minimum":
+                xCount = int(x[self.columns[exXCount]])
                 atomsRange[0]=(xCount, atomsRange[0][1])
             elif self.useCn.lower().startswith("plusminus"):
+                xCount = int(x[self.columns[exXCount]])
                 g=2
                 if len("plusminus_")<len(self.useCn):
                     g=int(self.useCn[len("plusminus_"):])

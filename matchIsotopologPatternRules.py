@@ -42,7 +42,7 @@ class PresenceRule(Rule):
                 return True
 
         if self.mustBePresent and isotopologDict[self.otherIsotopolog].intensity<self.minIntensity:
-            return True
+            return False
 
         ratWinPassed=True
         for isotopolog, window in self.ratioWindows.items():
@@ -101,14 +101,12 @@ class AnyIntensityRule(Rule):
         return self.anyIsotopolog
 
     def check(self, isotopologDict, log=False):
-        ret=False
-
         for iso in self.anyIsotopolog:
             if iso in isotopologDict.keys():
                 if isotopologDict[iso].intensity>=self.minimumIntensity:
-                    ret=True
+                    return True
 
-        return ret
+        return False
 
     def getMessage(self):
         return "No isotopolog %s is above the set minimum intensity threshold (%.2f)"%(self.anyIsotopolog, self.minimumIntensity)
@@ -125,14 +123,14 @@ class AllIntensityRule(Rule):
         return self.allIsotopolog
 
     def check(self, isotopologDict, log=False):
-        ret=True
-
         for iso in self.allIsotopolog:
             if iso in isotopologDict.keys():
                 if isotopologDict[iso].intensity<self.minimumIntensity:
-                    ret=False
+                    return False
+            else:
+                return False
 
-        return ret
+        return True
 
     def getMessage(self):
         return "All isotopologs %s are below the set minimum intensity threshold (%.2f)"%(self.allIsotopolog, self.minimumIntensity)
@@ -204,9 +202,7 @@ class RuleMatcher:
     def checkChromPeaks(self, peakAreas):
         rulesValid=True
         for rule in self.rules:
-            if rulesValid:
-                ruleValid=rule.check(peakAreas, log=self.log)
-                rulesValid=rulesValid and ruleValid
+            rulesValid=rulesValid and rule.check(peakAreas, log=self.log)
 
         return rulesValid
 
