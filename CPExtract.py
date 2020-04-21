@@ -4672,7 +4672,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             mz = pi.mz - 1.00335484 * ih
                             peakID = scan.findMZ(mz, ppm=ppm)
                             if peakID[0] != -1 and ih!=0:
-                                self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=1*tj+0.05*ih, ymin=0+0.01*ih, ymax=scan.intensity_list[peakID[0]]/scale+0.01*ih, color=group.color, linewidth=2.0)
+                                self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=1*tj-0.05*ih, ymin=0-0.01*ih, ymax=scan.intensity_list[peakID[0]]/scale-0.01*ih, color=group.color, linewidth=2.0)
 
 
                         self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [e/maxN for e in eic], color=group.color, label="M: %s"%(a))
