@@ -67,7 +67,7 @@ class RegExTestDialog(QtGui.QDialog):
                         groups[finSt]=[]
                     groups[finSt].append(string)
 
-                    resA.append("%s --> %s"%(string, finSt))
+                    #resA.append("%s --> %s"%(string, finSt))
                 except Exception as ex:
                     resA.append("%s --> Error in RegEx (%s)"%(string, ex.message))
 
@@ -81,7 +81,7 @@ class RegExTestDialog(QtGui.QDialog):
                 resA.append("")
 
 
-            self.res.setText("Parsed: \n\n%s"%("\n".join(resA)))
+            self.res.setText("%s"%("\n".join(resA)))
 
         except Exception as ex:
             self.res.setText("Error in RegEx/Result (%s)"%ex.message)

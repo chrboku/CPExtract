@@ -4661,14 +4661,27 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
 
                         scale=1
-                        self.ui.resultsExperimentMSScanPeaks_plot.axes.text(x=1*tj, y=0, s=a, rotation=90, horizontalalignment='left', color=group.color, backgroundcolor="white")
                         for ih in range(0, 32):
                             mz = pi.mz + 1.00335484 * ih
                             peakID = scan.findMZ(mz, ppm=ppm)
                             if peakID[0] != -1:
                                 if ih==0:
                                     scale=scan.intensity_list[peakID[0]]
-                                self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=1*tj+0.05*ih, ymin=0+0.01*ih, ymax=scan.intensity_list[peakID[0]]/scale+0.01*ih, color=group.color, linewidth=2.0)
+                                    break
+                                scale=max(scale, scan.intensity_list[peakID[0]])
+                            mz = pi.mz - 1.00335484 * ih
+                            peakID = scan.findMZ(mz, ppm=ppm)
+                            if peakID[0] != -1 and ih!=0:
+                                scale=max(scale, scan.intensity_list[peakID[0]])
+
+                        self.ui.resultsExperimentMSScanPeaks_plot.axes.text(x=1*tj, y=-0.2, s=a, rotation=70, horizontalalignment='right', verticalalignment='top', color=group.color, backgroundcolor="white")
+                        for ih in range(0, 32):
+                            mz = pi.mz + 1.00335484 * ih
+                            peakID = scan.findMZ(mz, ppm=ppm)
+                            if peakID[0] != -1:
+                                if ih==0:
+                                    scale=scan.intensity_list[peakID[0]]
+                                self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=1*tj+0.05*ih, ymin=0+0.01*ih, ymax=scan.intensity_list[peakID[0]]/scale+0.01*ih, color=group.color, linewidth=2.0 if ih!=0 else 6.0)
                             mz = pi.mz - 1.00335484 * ih
                             peakID = scan.findMZ(mz, ppm=ppm)
                             if peakID[0] != -1 and ih!=0:
