@@ -4853,14 +4853,13 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         texts.append("potentially lead to a deadlock and an incorrect data processing with many false-positive results and/or false-negatives. \n")
         texts.append("If you are unsure always try to contact an expert in data processing and/or ask a colleague of yours to\nhelp you with optimizing these values.\n\n\n\n")
         texts.append("Results of individual files\n-=-=-=-=-=-=-=-=-=-=-=-=-=-\n\n")
-        texts.append(("%%%ds   %%12s %%12s %%12s %%12s      %%20s %%40s %%25s\n"%(maxFileNameLength)) % ("File", "MZs", "MZ Bins", "Features", "Metabolites",
-                                                                                                               "mz delta ppm MZs","avg M:M' MZs; Area;Abundance", "avg L-Enrichment"))
+        texts.append(("%%%ds   %%12s %%12s %%12s\n"%(maxFileNameLength)) % ("File", "MZs", "MZ Bins", "Features"))
         indGroups = {}
         for group in definedGroups:
             grName = str(group.name)
             indGroups[grName] = []
             texts.append(" Group "+grName+" [%d files%s%s%s%s, color %s]\n" %(len(group.files), ", Omit (minFound %d)"%group.minFound if group.omitFeatures else "", ", use for grouping" if group.useForMetaboliteGrouping else "", ", False positives remove", ", use as MSMS targets" if group.useAsMSMSTarget else "", group.color))
-            texts.append("%s\n"%("-"*(2+6+maxFileNameLength+12*4+6+20*3+25)))
+            texts.append("%s\n"%("-"*(2+6+maxFileNameLength+11*3)))
             for file in natSort(group.files):
                 indGroups[grName].append(str(file))
 
@@ -4872,29 +4871,13 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     conn.create_aggregate("stdev", 1, StdevFunc)
 
                     nMZs = SQLgetSingleFieldFromOneRow(curs, "SELECT COUNT(*) FROM MZs")
-                    nMZsPPMDelta = SQLgetSingleFieldFromOneRow(curs, "SELECT AVG((lmz-mz-tmz)*1000000/mz) FROM MZs")
-                    nMZsPPMDeltaStd = SQLgetSingleFieldFromOneRow(curs, "SELECT STDEV((lmz-mz-tmz)*1000000/mz) FROM MZs")
                     nMZBins = SQLgetSingleFieldFromOneRow(curs, "SELECT COUNT(*) FROM MZBins")
                     nFeatures=SQLgetSingleFieldFromOneRow(curs, "SELECT COUNT(*) FROM chromPeaks")
-                    nMetabolites = SQLgetSingleFieldFromOneRow(curs, "SELECT COUNT(*) FROM featureGroups")
-                    avgRatioSignals=SQLgetSingleFieldFromOneRow(curs, "SELECT AVG(intensity/intensityL) FROM MZs")
-                    avgRatioSignalsStd=SQLgetSingleFieldFromOneRow(curs, "SELECT STDEV(intensity/intensityL) FROM MZs")
-                    avgRatioFeaturesArea = SQLgetSingleFieldFromOneRow(curs, "SELECT AVG(NPeakArea/LPeakArea) FROM chromPeaks")
-                    avgRatioFeaturesAbundance = SQLgetSingleFieldFromOneRow(curs, "SELECT AVG(NPeakAbundance/LPeakAbundance) FROM chromPeaks")
-                    avgEnrichmentL = SQLgetSingleFieldFromOneRow(curs, "SELECT AVG(xcount/(xcount+peaksRatioMPm1)) FROM chromPeaks WHERE peaksRatioMPm1 > 0")
-                    avgEnrichmentLStd = SQLgetSingleFieldFromOneRow(curs, "SELECT STDEV(xcount/(xcount+peaksRatioMPm1)) FROM chromPeaks WHERE peaksRatioMPm1 > 0")
-                    texts.append(("%%%ds   %%12s %%12s %%12s %%12s      %%20s %%40s %%25s\n"%(maxFileNameLength))%(file,
+                    texts.append(("%%%ds   %%12s %%12s %%12s\n"%(maxFileNameLength))%(
+                                                                                                  file,
                                                                                                   nMZs if nMZs>0 else "",
                                                                                                   nMZBins if nMZBins>0 else "",
-                                                                                                  nFeatures if nFeatures>0 else "",
-                                                                                                  nMetabolites if nMetabolites>0 else "",
-                                                                                                  "%s (+/- %s)"%("%.2f"%nMZsPPMDelta if nMZsPPMDelta!=None else "", "%.2f"%nMZsPPMDeltaStd if nMZsPPMDeltaStd!=None else "") if nMZsPPMDelta!=None else "",
-                                                                                                  "%s; %s; %s"%(
-                                                                                                      "%6.2f (+/- %s)"%(avgRatioSignals, "%.2f"%avgRatioSignalsStd if avgRatioSignalsStd!=None else "") if avgRatioSignals!=None else "-",
-                                                                                                      "%6.2f"%avgRatioFeaturesArea if avgRatioFeaturesArea!=None else "-",
-                                                                                                      "%6.2f"%avgRatioFeaturesAbundance if avgRatioFeaturesAbundance!=None else "-",
-                                                                                                  ) if avgRatioSignalsStd!=None or avgRatioFeaturesArea!=None or avgRatioFeaturesAbundance!=None else "",
-                                                                                                  "%.2f%% (+/- %s%%)"%(100*avgEnrichmentL, "%.2f"%(100*avgEnrichmentLStd) if avgEnrichmentLStd!=None else "") if avgEnrichmentL!=None else ""))
+                                                                                                  nFeatures if nFeatures>0 else ""))
                 else:
                     texts.append(("%%%ds   File not processed successfully\n"%(maxFileNameLength))%file)
 
