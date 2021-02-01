@@ -4984,6 +4984,8 @@ font: 7pt;</string>
     <addaction name="actionIsotopic_enrichment"/>
     <addaction name="separator"/>
     <addaction name="actionSet_working_directory"/>
+    <addaction name="separator"/>
+    <addaction name="actionShow_summary"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuTools"/>
@@ -5022,6 +5024,11 @@ font: 7pt;</string>
   <action name="actionSet_working_directory">
    <property name="text">
     <string>Set working directory</string>
+   </property>
+  </action>
+  <action name="actionShow_summary">
+   <property name="text">
+    <string>Show summary</string>
    </property>
   </action>
  </widget>

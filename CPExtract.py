@@ -4823,6 +4823,146 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         pw.hide()
 
 
+    def showResultsSummary(self):
+        from utils import SQLgetSingleFieldFromOneRow
+
+        texts=[]
+
+        definedGroups = [t.data(QListWidgetItem.UserType).toPyObject() for t in
+                         natSort(self.ui.groupsList.findItems('*', QtCore.Qt.MatchWildcard),
+                                 key=lambda x: str(x.data(QListWidgetItem.UserType).toPyObject().name))]
+        for group in definedGroups:
+            for i in range(len(group.files)):
+                group.files[i] = str(group.files[i]).replace("\\", "/")
+
+        # get all individual LC-HRMS files for processing
+
+        maxFileNameLength=10
+        for group in definedGroups:
+            for file in natSort(group.files):
+                maxFileNameLength=max(maxFileNameLength, len(file))
+
+        texts.append("Note: \n")
+        texts.append("All calculated numbers shown here are based on the last data processing that was done for this dataset.\n")
+        texts.append("Thus, these calculated values are influenced and distorted by used parameters. \n")
+        texts.append("For example, an incorrect value for the parameter M:M' ratio will have a dramatic impact on the results and\n")
+        texts.append("consequently also on these number. Please only consider these numbers for a quick overview of the generated last results. \n")
+        texts.append("\n")
+        texts.append("Caution:\n")
+        texts.append("Do not use these numbers as the only means of further improving your data processing parameters. This could\n")
+        texts.append("potentially lead to a deadlock and an incorrect data processing with many false-positive results and/or false-negatives. \n")
+        texts.append("If you are unsure always try to contact an expert in data processing and/or ask a colleague of yours to\nhelp you with optimizing these values.\n\n\n\n")
+        texts.append("Results of individual files\n-=-=-=-=-=-=-=-=-=-=-=-=-=-\n\n")
+        texts.append(("%%%ds   %%12s %%12s %%12s %%12s      %%20s %%40s %%25s\n"%(maxFileNameLength)) % ("File", "MZs", "MZ Bins", "Features", "Metabolites",
+                                                                                                               "mz delta ppm MZs","avg M:M' MZs; Area;Abundance", "avg L-Enrichment"))
+        indGroups = {}
+        for group in definedGroups:
+            grName = str(group.name)
+            indGroups[grName] = []
+            texts.append(" Group "+grName+" [%d files%s%s%s%s, color %s]\n" %(len(group.files), ", Omit (minFound %d)"%group.minFound if group.omitFeatures else "", ", use for grouping" if group.useForMetaboliteGrouping else "", ", False positives remove", ", use as MSMS targets" if group.useAsMSMSTarget else "", group.color))
+            texts.append("%s\n"%("-"*(2+6+maxFileNameLength+12*4+6+20*3+25)))
+            for file in natSort(group.files):
+                indGroups[grName].append(str(file))
+
+                if os.path.exists(file+".identified.sqlite"):
+                    conn = connect(file+".identified.sqlite")
+                    curs = conn.cursor()
+
+                    from utils import StdevFunc
+                    conn.create_aggregate("stdev", 1, StdevFunc)
+
+                    nMZs = SQLgetSingleFieldFromOneRow(curs, "SELECT COUNT(*) FROM MZs")
+                    nMZsPPMDelta = SQLgetSingleFieldFromOneRow(curs, "SELECT AVG((lmz-mz-tmz)*1000000/mz) FROM MZs")
+                    nMZsPPMDeltaStd = SQLgetSingleFieldFromOneRow(curs, "SELECT STDEV((lmz-mz-tmz)*1000000/mz) FROM MZs")
+                    nMZBins = SQLgetSingleFieldFromOneRow(curs, "SELECT COUNT(*) FROM MZBins")
+                    nFeatures=SQLgetSingleFieldFromOneRow(curs, "SELECT COUNT(*) FROM chromPeaks")
+                    nMetabolites = SQLgetSingleFieldFromOneRow(curs, "SELECT COUNT(*) FROM featureGroups")
+                    avgRatioSignals=SQLgetSingleFieldFromOneRow(curs, "SELECT AVG(intensity/intensityL) FROM MZs")
+                    avgRatioSignalsStd=SQLgetSingleFieldFromOneRow(curs, "SELECT STDEV(intensity/intensityL) FROM MZs")
+                    avgRatioFeaturesArea = SQLgetSingleFieldFromOneRow(curs, "SELECT AVG(NPeakArea/LPeakArea) FROM chromPeaks")
+                    avgRatioFeaturesAbundance = SQLgetSingleFieldFromOneRow(curs, "SELECT AVG(NPeakAbundance/LPeakAbundance) FROM chromPeaks")
+                    avgEnrichmentL = SQLgetSingleFieldFromOneRow(curs, "SELECT AVG(xcount/(xcount+peaksRatioMPm1)) FROM chromPeaks WHERE peaksRatioMPm1 > 0")
+                    avgEnrichmentLStd = SQLgetSingleFieldFromOneRow(curs, "SELECT STDEV(xcount/(xcount+peaksRatioMPm1)) FROM chromPeaks WHERE peaksRatioMPm1 > 0")
+                    texts.append(("%%%ds   %%12s %%12s %%12s %%12s      %%20s %%40s %%25s\n"%(maxFileNameLength))%(file,
+                                                                                                  nMZs if nMZs>0 else "",
+                                                                                                  nMZBins if nMZBins>0 else "",
+                                                                                                  nFeatures if nFeatures>0 else "",
+                                                                                                  nMetabolites if nMetabolites>0 else "",
+                                                                                                  "%s (+/- %s)"%("%.2f"%nMZsPPMDelta if nMZsPPMDelta!=None else "", "%.2f"%nMZsPPMDeltaStd if nMZsPPMDeltaStd!=None else "") if nMZsPPMDelta!=None else "",
+                                                                                                  "%s; %s; %s"%(
+                                                                                                      "%6.2f (+/- %s)"%(avgRatioSignals, "%.2f"%avgRatioSignalsStd if avgRatioSignalsStd!=None else "") if avgRatioSignals!=None else "-",
+                                                                                                      "%6.2f"%avgRatioFeaturesArea if avgRatioFeaturesArea!=None else "-",
+                                                                                                      "%6.2f"%avgRatioFeaturesAbundance if avgRatioFeaturesAbundance!=None else "-",
+                                                                                                  ) if avgRatioSignalsStd!=None or avgRatioFeaturesArea!=None or avgRatioFeaturesAbundance!=None else "",
+                                                                                                  "%.2f%% (+/- %s%%)"%(100*avgEnrichmentL, "%.2f"%(100*avgEnrichmentLStd) if avgEnrichmentLStd!=None else "") if avgEnrichmentL!=None else ""))
+                else:
+                    texts.append(("%%%ds   File not processed successfully\n"%(maxFileNameLength))%file)
+
+            texts.append("\n\n\n")
+
+        resFileFull=str(self.ui.groupsSave.text())
+        if os.path.exists(resFileFull):
+            texts.append("Convoluted results\n-=-=-=-=-=-=-=-=-=-\n\n")
+
+            from utils import readTSVFileAsBunch
+            headers, table=readTSVFileAsBunch(resFileFull, delim="\t", parseToNumbers=True, useColumns=None, omitFirstNRows=0,renameRows=None)
+
+            features=set()
+            negMode=set()
+            posMode=set()
+            metabolites={}
+            metabolitesIonMode={}
+
+            for row in table:
+                features.add(row.Num)
+                if row.Ionisation_Mode=="-":
+                    negMode.add(row.Num)
+                else:
+                    posMode.add(row.Num)
+                if row.OGroup not in metabolites.keys():
+                    metabolites[row.OGroup]=[]
+                metabolites[row.OGroup].append(row.Num)
+                if row.OGroup not in metabolitesIonMode.keys():
+                    metabolitesIonMode[row.OGroup]=set()
+                metabolitesIonMode[row.OGroup].add(row.Ionisation_Mode)
+
+            texts.append(" Features    %12d\n Metabolites %12d\n"%(len(features), len(metabolites)))
+            texts.append("\n")
+            texts.append(" %12d metabolites with a     single feature\n" % (len([1 for key in metabolites.keys() if len(metabolites[key])==1])))
+            texts.append(" %12d metabolites with          two features\n" % (len([1 for key in metabolites.keys() if len(metabolites[key]) == 2])))
+            texts.append(" %12d metabolites with        three features\n" % (len([1 for key in metabolites.keys() if len(metabolites[key]) == 3])))
+            texts.append(" %12d metabolites with         four features\n" % (len([1 for key in metabolites.keys() if len(metabolites[key]) == 4])))
+            texts.append(" %12d metabolites with         five features\n" % (len([1 for key in metabolites.keys() if len(metabolites[key]) == 5])))
+            texts.append(" %12d metabolites with   >5 and <11 features\n" % (len([1 for key in metabolites.keys() if 5 < len(metabolites[key]) < 11])))
+            texts.append(" %12d metabolites with  >10 and <21 features\n" % (len([1 for key in metabolites.keys() if 10 < len(metabolites[key]) < 21])))
+            texts.append(" %12d metabolites with          >20 features\n" % (len([1 for key in metabolites.keys() if 20 < len(metabolites[key])])))
+            texts.append("\n")
+            texts.append(" %12d metabolites with only ions in the positive ionization mode\n"%(len([1 for key in metabolitesIonMode.keys() if str(metabolitesIonMode[key])=="set(['+'])"])))
+            texts.append(" %12d metabolites with only ions in the negative ionization mode\n" % (len([1 for key in metabolitesIonMode.keys() if str(metabolitesIonMode[key]) == "set(['-'])"])))
+            texts.append(" %12d metabolites with      ions in         both ionization modes\n" % (len([1 for key in metabolitesIonMode.keys() if str(metabolitesIonMode[key]) == "set(['+', '-'])"])))
+            texts.append("\n")
+            texts.append("\n")
+
+        resFileFullOmitted = str(self.ui.groupsSave.text()).replace(".tsv", ".omittedFPs.tsv")
+        if os.path.exists(resFileFullOmitted):
+            texts.append("Omitted features\n-=-=-=-=-=-=-=-=-\n\n")
+
+            from utils import readTSVFileAsBunch
+            headers, table=readTSVFileAsBunch(resFileFullOmitted, delim="\t", parseToNumbers=True, useColumns=None, omitFirstNRows=0,renameRows=None)
+
+            features=set()
+
+            for row in table:
+                features.add(row.Num)
+
+            texts.append(" Features    %12d\n"%(len(features)))
+
+
+
+        #logging.info("".join(texts))
+        from mePyGuis.QScrollableMessageBox import QScrollableMessageBox
+        pw = QScrollableMessageBox(parent=None, text="".join(texts), title="Processing results", width=700, height=700)
+        pw.exec_()
 
 
 
@@ -5330,6 +5470,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.ui.setupTracers.clicked.connect(self.showTracerEditor)
 
         self.ui.CPEditOpen.clicked.connect(self.showCPEditor)
+
+        self.ui.actionShow_summary.triggered.connect(self.showResultsSummary)
 
         self.ui.processMultipleFiles.toggled.connect(self.processMultipleFilesChanged)
         self.ui.saveMZXML.toggled.connect(self.saveMZXMLChanged)

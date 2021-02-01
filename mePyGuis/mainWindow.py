@@ -2154,6 +2154,8 @@ class Ui_MainWindow(object):
         self.actionIsotopic_enrichment.setObjectName(_fromUtf8("actionIsotopic_enrichment"))
         self.actionSet_working_directory = QtGui.QAction(MainWindow)
         self.actionSet_working_directory.setObjectName(_fromUtf8("actionSet_working_directory"))
+        self.actionShow_summary = QtGui.QAction(MainWindow)
+        self.actionShow_summary.setObjectName(_fromUtf8("actionShow_summary"))
         self.menuHelp.addAction(self.helpMenue)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.aboutMenue)
@@ -2166,6 +2168,8 @@ class Ui_MainWindow(object):
         self.menuTools.addAction(self.actionIsotopic_enrichment)
         self.menuTools.addSeparator()
         self.menuTools.addAction(self.actionSet_working_directory)
+        self.menuTools.addSeparator()
+        self.menuTools.addAction(self.actionShow_summary)
         self.menuBar.addAction(self.menuFile.menuAction())
         self.menuBar.addAction(self.menuTools.menuAction())
         self.menuBar.addAction(self.menuHelp.menuAction())
@@ -2497,6 +2501,7 @@ class Ui_MainWindow(object):
         self.helpMenue.setText(_translate("MainWindow", "Help", None))
         self.actionIsotopic_enrichment.setText(_translate("MainWindow", "Isotopic enrichment", None))
         self.actionSet_working_directory.setText(_translate("MainWindow", "Set working directory", None))
+        self.actionShow_summary.setText(_translate("MainWindow", "Show summary", None))
 
 import resources_rc
 
