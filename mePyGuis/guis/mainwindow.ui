@@ -70,7 +70,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="inputTab">
        <attribute name="title">
@@ -4059,8 +4059,8 @@ font: 7pt;</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1940</width>
-             <height>1280</height>
+             <width>1540</width>
+             <height>833</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_15">
@@ -4686,7 +4686,7 @@ font: 7pt;</string>
             <item row="4" column="1">
              <widget class="QTabWidget" name="tabWidget_3">
               <property name="currentIndex">
-               <number>0</number>
+               <number>1</number>
               </property>
               <widget class="QWidget" name="tab_5">
                <attribute name="title">
@@ -4721,6 +4721,16 @@ font: 7pt;</string>
                <layout class="QGridLayout" name="gridLayout_43">
                 <item row="0" column="0">
                  <widget class="QWidget" name="resultsExperimentSeparatedPeaks_widget" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="tab">
+               <attribute name="title">
+                <string>Individual chromatographic peaks</string>
+               </attribute>
+               <layout class="QGridLayout" name="gridLayout_28">
+                <item row="0" column="0">
+                 <widget class="QWidget" name="resultsExperimentIndChromPeaks" native="true"/>
                 </item>
                </layout>
               </widget>

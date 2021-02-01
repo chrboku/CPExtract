@@ -2991,7 +2991,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                    [grp[(grp.rfind("/") + 1):max(grp.lower().rfind(".mzxml"), grp.lower().rfind(".mzml"))] + "_Area" for grp in
                                     natSort(group.files)])
                             outputOrder.append(grpName)
-                            grpStats.append((str(group.name+"_GroupStat"), group.minFound, group.omitFeatures))
+                            grpStats.append((str(group.name+"_GroupStat"), group.minFound, group.omitFeatures, group.removeAsFalsePositive))
 
                         addStatsColumnToResults(resFileFull, groups, resFileFull, outputOrder)
 
@@ -4578,6 +4578,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.clearPlot(self.ui.resultsExperiment_plot)
         self.clearPlot(self.ui.resultsExperimentSeparatedPeaks_plot)
         self.clearPlot(self.ui.resultsExperimentMSScanPeaks_plot)
+        self.clearPlot(self.ui.resultsExperimentIndChromPeaks_plot)
 
         plotItems = []
 
@@ -4674,6 +4675,10 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             if peakID[0] != -1 and ih!=0:
                                 scale=max(scale, scan.intensity_list[peakID[0]])
 
+
+                        self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [e/maxN for e in eic], color=group.color, label="M: %s"%(a))
+
+
                         self.ui.resultsExperimentMSScanPeaks_plot.axes.text(x=1*tj, y=-0.2, s=a, rotation=70, horizontalalignment='right', verticalalignment='top', color=group.color, backgroundcolor="white")
                         for ih in range(0, 32):
                             mz = pi.mz + 1.00335484 * ih
@@ -4688,56 +4693,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                 self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=1*tj-0.05*ih, ymin=0-0.01*ih, ymax=scan.intensity_list[peakID[0]]/scale-0.01*ih, color=group.color, linewidth=2.0)
 
 
-                        self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [e/maxN for e in eic], color=group.color, label="M: %s"%(a))
                         self.ui.resultsExperimentSeparatedPeaks_plot.axes.plot([t / 60. + grpInd for t in times if rtBorderMin<=t/60.<=rtBorderMax], [eic[j]/maxN for j in range(len(eic)) if rtBorderMin<=times[j]/60.<=rtBorderMax], color=group.color, label="M: %s"%(a))
                     tj=tj+1
-
-            maxSigAbundance=0
-            if mostAbundantFile is not None and False:
-
-                self.ui.resultsExperiment_plot.axes.axvline(x=pi.rt, color=mostAbundantFile[3])
-
-                self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=mostAbundantFile[2].mz_list, ymin=0, ymax=mostAbundantFile[2].intensity_list,
-                                                                      color="lightgrey")
-                intLeft=0
-                mz = pi.mz
-                peakID = mostAbundantFile[2].findMZ(mz, ppm=ppm)
-                if peakID[0] != -1:
-                    intLeft=mostAbundantFile[2].intensity_list[peakID[0]]
-
-
-                for i in range(0, 32):
-                    mz=pi.mz+1.00335484*i
-                    peakID = mostAbundantFile[2].findMZ(mz, ppm=ppm)
-                    if peakID[0]!=-1:
-                        self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=mz, ymin=0, ymax=mostAbundantFile[2].intensity_list[peakID[0]],
-                                                                              color=mostAbundantFile[3], linewidth=2.0)
-                    mz=pi.mz-1.00335484*i
-                    peakID = mostAbundantFile[2].findMZ(mz, ppm=ppm)
-                    if peakID[0]!=-1:
-                        self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=mz, ymin=0, ymax=mostAbundantFile[2].intensity_list[peakID[0]],
-                                                                              color=mostAbundantFile[3], linewidth=2.0)
-
-                for i in [0,1,2,3]:
-
-                    annotationPPM=5.
-
-                    self.ui.resultsExperimentMSScanPeaks_plot.axes.add_patch(patches.Rectangle(
-                        ((pi.mz + (1.00335 * i) ) * (1. - annotationPPM / 1000000.), intLeft * 0),
-                        (pi.mz + (1.00335 * i) ) * (2 * annotationPPM / 1000000.), intLeft,
-                        edgecolor='none', facecolor='purple', alpha=0.4))
-
-
-                    rat=getNormRatio(0.9893, 15, i)
-                    self.ui.resultsExperimentMSScanPeaks_plot.axes.add_patch(patches.Rectangle(
-                        ((pi.mz + (1.00335 * i) ) * (1. - 2*annotationPPM / 1000000.), intLeft*rat*0.98),
-                        (pi.mz + (1.00335 * i) ) * (4 * annotationPPM / 1000000.), intLeft*rat*0.04,
-                        edgecolor='none', facecolor='orange', alpha=0.8))
-
-                peakID = mostAbundantFile[2].findMZ(pi.mz, ppm=ppm)
-
-                if peakID[0]!=-1:
-                    maxSigAbundance=max(maxSigAbundance, mostAbundantFile[2].intensity_list[peakID[0]])
 
         if len(plotItems)==1:
             pi=plotItems[0]
@@ -4761,6 +4718,65 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.drawCanvas(self.ui.resultsExperiment_plot, xlim=rtlim, ylim=intlim)
         self.drawCanvas(self.ui.resultsExperimentSeparatedPeaks_plot, showLegendOverwrite=False)
         self.drawCanvas(self.ui.resultsExperimentMSScanPeaks_plot, xlim=[0, tj+2], ylim=[0, 1.5])
+
+
+        if len(plotItems)==1:
+            for h, pi in enumerate(plotItems):
+
+                rtBorderMin=pi.rt-borderOffset
+                rtBorderMax=pi.rt+borderOffset
+
+                tj=1
+                for grpInd, group in enumerate(definedGroups):
+                    for i in range(len(group.files)):
+                        fi = str(group.files[i]).replace("\\", "/")
+                        a=fi[fi.rfind("/") + 1:fi.find(".mzXML")]
+                        if pi.scanEvent in self.loadedMZXMLs[fi].getFilterLines(includeMS1=True, includeMS2=False, includePosPolarity=True, includeNegPolarity=True):
+
+                            scale = 1
+                            eic, times, scanIds, mzs = self.loadedMZXMLs[fi].getEIC(pi.mz, ppm=ppm,filterLine=pi.scanEvent)
+                            eic = [eic[j] for j in range(len(eic)) if rtBorderMin<=times[j]/60.<=rtBorderMax]
+                            sc = max(eic)
+                            if sc > 0:
+                                scale = sc
+
+                            for ih in range(-32, 32):
+
+                                eic, times, scanIds, mzs=self.loadedMZXMLs[fi].getEIC(pi.mz + 1.00335484 * ih, ppm=ppm, filterLine=pi.scanEvent)
+                                eic = [e for j, e in enumerate(eic) if rtBorderMin <=times[j]/60.<=rtBorderMax]
+                                times = [t for j, t in enumerate(times) if rtBorderMin <= t / 60. <= rtBorderMax]
+
+                                while len(eic) > 0 and eic[0]==0:
+                                    del eic[0]
+                                    del times[0]
+                                while len(eic)>0 and eic[len(eic)-1]==0:
+                                    del eic[len(eic)-1]
+                                    del times[len(times)-1]
+
+                                if len(eic)>0:
+
+                                    eic = [eic[j]/scale for j in range(len(eic))]
+                                    sc = max(eic)
+                                    if sc == 0:
+                                        sc = 1
+                                    if sc > 1:
+                                        self.ui.resultsExperimentIndChromPeaks_plot.axes.text(x=pi.rt + (tj * 1.1) * (rtBorderMax - rtBorderMin), y=ih * 1.1 - 0.2, s="/E%.1f"%log10(sc),  horizontalalignment='left', color="slategrey")
+                                    else:
+                                        sc=1
+
+                                    eic = [e/sc+1.1*ih for e in eic]
+                                    times = [t / 60. + tj * 1.1 * (rtBorderMax - rtBorderMin) for t in times]
+
+                                    self.ui.resultsExperimentIndChromPeaks_plot.axes.plot(times, eic, color=group.color, label="M: %s"%(a))
+                                else:
+
+                                    self.ui.resultsExperimentIndChromPeaks_plot.axes.plot([rtBorderMin + tj * 1.1 * (rtBorderMax - rtBorderMin), rtBorderMax + tj * 1.1 * (rtBorderMax - rtBorderMin)], [1.1*ih,1.1*ih], color=group.color)
+
+
+
+                            self.ui.resultsExperimentIndChromPeaks_plot.axes.text(x=pi.rt + tj * 1.1 * (rtBorderMax - rtBorderMin), y=32*1.1+0.5, s=a, rotation=90, horizontalalignment='left', color=group.color, backgroundcolor="white")
+                        tj=tj+1
+        self.drawCanvas(self.ui.resultsExperimentIndChromPeaks_plot)
 
 
     def exportAsPDF(self, pdfFile=None):
@@ -5498,6 +5514,24 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         vbox.addWidget(self.ui.resultsExperimentSeparatedPeaks_plot.canvas)
         vbox.addWidget(self.ui.resultsExperimentSeparatedPeaks_plot.mpl_toolbar)
         self.ui.resultsExperimentSeparatedPeaks_widget.setLayout(vbox)
+
+        #Setup experiment plot - separate chrom. peaks plot
+        #http://eli.thegreenplace.net/2009/01/20/matplotlib-with-pyqt-guis/
+        self.ui.resultsExperimentIndChromPeaks_plot = QtCore.QObject()
+        self.ui.resultsExperimentIndChromPeaks_plot.dpi = 50
+        self.ui.resultsExperimentIndChromPeaks_plot.fig = Figure((5.0, 4.0), dpi=self.ui.resultsExperimentIndChromPeaks_plot.dpi, facecolor='white')
+        self.ui.resultsExperimentIndChromPeaks_plot.fig.subplots_adjust(left=0.05, bottom=0.05, right=0.99, top=0.95)
+        self.ui.resultsExperimentIndChromPeaks_plot.canvas = FigureCanvas(self.ui.resultsExperimentIndChromPeaks_plot.fig)
+        self.ui.resultsExperimentIndChromPeaks_plot.canvas.setParent(self.ui.visualization_singleFile_EIC)
+        self.ui.resultsExperimentIndChromPeaks_plot.axes = self.ui.resultsExperimentIndChromPeaks_plot.fig.add_subplot(111)
+        simpleaxis(self.ui.resultsExperimentIndChromPeaks_plot.axes)
+        self.ui.resultsExperimentIndChromPeaks_plot.twinxs = [self.ui.resultsExperimentIndChromPeaks_plot.axes]
+        self.ui.resultsExperimentIndChromPeaks_plot.mpl_toolbar = NavigationToolbar(self.ui.resultsExperimentIndChromPeaks_plot.canvas, self.ui.visualization_singleFile_EIC)
+
+        vbox = QtGui.QVBoxLayout()
+        vbox.addWidget(self.ui.resultsExperimentIndChromPeaks_plot.canvas)
+        vbox.addWidget(self.ui.resultsExperimentIndChromPeaks_plot.mpl_toolbar)
+        self.ui.resultsExperimentIndChromPeaks.setLayout(vbox)
 
         #Setup experiment plot - separate chrom. peaks plot
         #http://eli.thegreenplace.net/2009/01/20/matplotlib-with-pyqt-guis/
