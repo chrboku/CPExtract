@@ -957,6 +957,11 @@ def writeBunchsAsTSVFile(bunchs, outFile, delim="\t", writeAttributes=None, useA
 
 
 
+def SQLgetSingleFieldFromOneRow(curs, selectStatement):
+    curs.execute(selectStatement)
+    for row in curs:
+        return row[0]
+
 def SQLSelectAsObject(curs, selectStatement, returnColumns=False, newObject=Bunch):
     curs.execute(selectStatement)
     names = list(map(lambda x: x[0], curs.description))
