@@ -97,41 +97,13 @@
 
 
 
-    <div id="installation" class="">
-        <div class="container">
-            <h2 class="codefolder">Download &amp; installation</h2>
-            <div class="row row-eq-height">
-                <div class="col-md-6 row-eq-height">
-                    <div class="bs-callout bs-callout-info s-callout-fullWidth">
-                        <h4>Windows 10</h4>
-                        <p>The setup of CP Extract is available at <a href="https://metabolomics-ifa.boku.ac.at/CPExtract/Setup_CPExtractII_v2.8.3.exe">https://metabolomics-ifa.boku.ac.at/CPExtract/Setup_CPExtractII_v2.8.3.exe</a></p>
-                    </div>
-                </div>
-            </div>
-
-            <h3>Sample dataset</h3>
-            <div class="row">
-                <div class="col-md-12">
-                    <p>For sample data please refer to the publication <a href="">DOI: TODO</a> and the homepage of CPExtract at <a href="https://metabolomics-ifa.boku.ac.at/CPExtract">https://metabolomics-ifa.boku.ac.at/CPExtract</a></p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-
-
-
-
-
-
 
 
     <div id="scope" class="container">
         <h2>Aim of CPExtract</h2>
         <p>The development of CPExtract was inspired by its predecessor MetExtract II, which is designed for detecting either native and uniformly isotopically labeled metabolites or to detect biotransformation products of native and uniformly isotopically labeled tracer compounds. While this strategy is great, the need for uniformly isotopically labeled compounds limits the tools applicability as many tracer compounds are not available as uniformly labeled compounds. </p>
         <p>CPExtracts aims to overcome this limitation by removing the limitation that uniformly labeled biotransformation products are needed. The software has a specifically designed isotopolog search algorithm, that can search for virtually any isotopolog pattern in the data. This algorithm no needs native and uniformly labled metabolite forms, but rather searches for unusual isotopolog patterns that are characteristic for the biotransformation products procuded under the specific experimental conditions. </p>
-        <p>For example, malonic acid is a metabolite required by many polyketide synthases. If labeled malonic acid is provided to the organism under investigation, it will incorporate the labeled malonic acid and thus such polyketides will show a m/z+2, m/z+4 etc. isotopolog pattern. Such a specific isotopolog pattern can be specified in CPExtract and subsequently the software will search for all metabolites that posess this specific pattern thereby facilitating the search for polyketides that contain malonate. </p>
+        <p>For example, malonic acid is a metabolite required by many polyketide synthases. If labeled malonic acid is provided to the organism under investigation, it will incorporate the labeled malonic acid and thus such polyketides will show a m/z+2*1.00335, m/z+4*1.00335 etc. isotopolog pattern. Such a specific isotopolog pattern can be specified in CPExtract and subsequently the software will search for all metabolites that posess this specific pattern thereby facilitating the search for polyketides that contain malonate. </p>
     </div>
 
 
@@ -145,12 +117,15 @@
 
     <div id="scope" class="container">
         <h2>Software parameters</h2>
-        <p>Almost all of the main parameters (ppm deviation, peak picking, etc.) are the same as in MetExtract II. Thus, please refer to the documentation of MetExtract II for these parameters. </p>
+        <p>Almost all of the main parameters (ppm deviation, peak picking, etc.) are the same as in MetExtract II. Thus, please refer to the documentation of MetExtract II for these parameters available <a href="./documentationPyMetExtract/index.html">here</a>. </p>
     </div>
     
     <div class="container">
-        <p>However, other than MetExtract II, CPExtract needs a ruleset that specify an unusual isotopolog pattern that shall be searched for. In order to be very flexible, this ruleset has to be specified as python code. For this, a button (Custom pattern configuration) is available in the settings. A single array that contains all rules for the pattern must be saved in the variable rules. </p>
-        <p>There are several rules available. All of them start from the main isotopolog, which is denoted X. Whenever a certain isotopolog shall be searched for, it has to be specified as a chemical formula with a distinct isotopolog in square-brackets. For example, the formula '[13C]2' specifies the isotopolog with 2 <sup>13</sup>C isotopes instead of two <sup>12</sup>C isotoppes. </p>
+        <p>However, other than MetExtract II, CPExtract needs a ruleset that specify an unusual isotopolog pattern that shall be searched for. In order to be very flexible, this ruleset has to be specified as python code.</p>
+        <p>To edit the rules, click on the button 'Custom pattern configuration' in the 'Process' tab of CPExtract's main window (see screenshot below). A popup for the rules will appear. </p>
+        <img src="./figures/CPMainWindow.png" width="100%"><br><br>
+        
+        <p>The rules that specify the desired isotopolog pattern is specified via several rules that need to be saved to a Python list with the name 'rules'. There are several rules available that can be combined arbitrarily. All of them start from the main isotopolog, which is denoted X. This main isotopolog also specifies the origin for the search. Whenever a certain isotopolog relative to X shall be searched for, it has to be specified as a chemical formula with a distinct isotopolog in square-brackets. For example, the formula '[13C]2' specifies the isotopolog with 2 <sup>13</sup>C isotopes instead of two <sup>12</sup>C isotoppes relative to X. </p>
         <p>The following rules are available:</p>
         <ul>
             <li><strong>PresenceRule</strong><br>This rule tests, if a certain other isotopolog relative to X is present and if it is within a certain ratio relative to X or any other isotopolog<br></li>
@@ -184,10 +159,14 @@
             <li><strong>maxRatio</strong>: float, specifies the minimum intensity all of the specified isotopologs must have</li>
         </ul><br>
         
+        <p>Each rule is a python object that is modified via its parameters. For readability it is recommended to always specify the parameter name followed by the parameter value. Please note that several parameters that use the same value can also be specified via a parameter to be re-used. </p>
         
-        <p>An example: <br>
-        <code style="font-size: xx-small; line-height: 80%;">
-            #####################################<br>
+        
+        <p style="border-left-color: dodgerblue; border-left-width: 2px; border-left-style: solid; padding-left: 10px;"><br>
+        <code style="font-size: xx-small; line-height: 50%; color: black; background: white;">
+            Example: <br>
+            <br>
+            <span style="color: lightslategrey;">#####################################<br>
             ## Generic ruleset<br>
             ##<br>
             ## X is the isotopolog from which the isotopolog patterns are checked.<br>
@@ -198,32 +177,53 @@
             ##<br>
             ## The rules must be saved in an array. All rules will then be applied sequentially during the search.<br>
             ## An error in the code will deactivate the dialogbox. See documentation for further information<br>
-            #####################################<br>
+                #####################################<br></span>
             <br>
             intThres=1E4<br>
             <br>
             rules = [<br>
-            &nbsp;&nbsp;&nbsp;## Signals, that must not be present<br>
-            &nbsp;&nbsp;&nbsp;AbsenceRule(otherIsotopolog="[13C]1", maxRatio=0.1),<br>
-            &nbsp;&nbsp;&nbsp;AbsenceRule(otherIsotopolog="[13C]2", maxRatio=0.1),<br>
+            <span style="color: firebrick;">&nbsp;&nbsp;&nbsp;## Isotopologs that must not be present<br></span>
+            &nbsp;&nbsp;&nbsp;AbsenceRule(otherIsotopolog="[13C]1", maxRatio=0.1),  <br>
+            <span style="color: lightslategrey;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## The X+13C  isotopolog must not be present (intensity less than 0.1*X)<br></span>
+            &nbsp;&nbsp;&nbsp;AbsenceRule(otherIsotopolog="[13C]2", maxRatio=0.1),  <br>
+            <span style="color: lightslategrey;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## The X+13C2 isotopolog must not be present (intensity less than 0.1*X)<br></span>
             <br>
-            &nbsp;&nbsp;&nbsp;## Minimum intensity rule<br>
-            &nbsp;&nbsp;&nbsp;AnyIntensityRule(anyIsotopolog=["X", "[13C]-2"], minimumIntensity=1E5),<br>
-            &nbsp;&nbsp;&nbsp;AllIntensityRule(allIsotopolog=["X", "[13C]-2"], minimumIntensity=intThres),<br>
+            <span style="color: firebrick;">&nbsp;&nbsp;&nbsp;## Minimum intensity rule</span><br>
+            &nbsp;&nbsp;&nbsp;AnyIntensityRule(anyIsotopolog=["X", "[13C]-2"], minimumIntensity=1E5),       <br>
+            <span style="color: lightslategrey;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## One of the isotopologs X or X-13C2 must have an intensity value greater than 1E5<br></span>
+            &nbsp;&nbsp;&nbsp;AllIntensityRule(allIsotopolog=["X", "[13C]-2"], minimumIntensity=intThres),  <br>
+            <span style="color: lightslategrey;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## One of the isotopologs X or X-13C2 must have an intensity vlaue greater than intThres (1E4), redundant<br></span>
             <br>
-            &nbsp;&nbsp;&nbsp;## Isotopologs that are verified as chromatographic peaks<br>
+            <span style="color: firebrick;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## Isotopologs that are verified as chromatographic peaks</span><br>
             &nbsp;&nbsp;&nbsp;PresenceRule(otherIsotopolog="[13C]-1" , minIntensity=intThres, mustBePresent=True, verifyChromPeakSimilarity=True, ratioWindows={"X": [0.1, 0.8], "[13C]-2": [0.1, 0.8]}),<br>
+            <span style="color: lightslategrey;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## X-13C must be present with an intensity of at least intThres and it must have the same chroamtographic peak as X. <br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## Furthermore, it must have a ratio relative to X of at least 0.1 and maximum 0.8 and a ratio relative to X-13C2 of at least 0.1 and maximum 0.8<br></span>
+            
             &nbsp;&nbsp;&nbsp;PresenceRule(otherIsotopolog="[13C]-2" , minIntensity=intThres, mustBePresent=True, verifyChromPeakSimilarity=True, ratioWindows={"X": [0.1, 2]}),<br>
+            <span style="color: lightslategrey;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## X-13C2 must be present with an intensity of at least intThres and it must have the same chroamtographic peak as X. <br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## Furthermore, it must have a ratio relative to X of at least 0.1 and maximum 2<br></span>
+            
             &nbsp;&nbsp;&nbsp;PresenceRule(otherIsotopolog="[13C]-3" , minIntensity=intThres, mustBePresent=True, verifyChromPeakSimilarity=True, ratioWindows={"[13C]-2": [0.1, 0.8], "[13C]-4": [0.1, 0.8]}),<br>
+            <span style="color: lightslategrey;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## X-13C3 must be present with an intensity of at least intThres and it must have the same chroamtographic peak as X. <br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## Furthermore, it must have a ratio relative to X-13C2 of at least 0.1 and maximum 0.8 and a ratio relative to X-13C4 of at least 0.1 and maximum 0.8<br></span>
+            
             &nbsp;&nbsp;&nbsp;PresenceRule(otherIsotopolog="[13C]-4" , minIntensity=intThres, mustBePresent=True, verifyChromPeakSimilarity=True, ratioWindows={"[13C]-2": [0.1, 0.8]}),<br>
+            <span style="color: lightslategrey;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## X-13C4 must be present with an intensity of at least intThres and it must have the same chroamtographic peak as X. <br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## Furthermore, it must have a ratio relative to X-13C2 of at least 0.1 and maximum 0.8<br></span>
+            
             &nbsp;&nbsp;&nbsp;PresenceRule(otherIsotopolog="[13C]-6" , minIntensity=intThres, mustBePresent=True, verifyChromPeakSimilarity=True, ratioWindows={"[13C]-4": [0.1, 0.8]})<br>
-            ]</code></p>
-        <p>The example matches the following isotopolog pattern:
-            <br><img src="figures/example.png"><br>
-            X is the most abundant signal with at least an intensity of 1E5. Additionally, no signals are present for [13C]1 and [13C]2. The signal that looks like it is a [13C]2 isotopolog is from a different, co-eluting compounds with a distinct <i>m/z</i> offset. Furthermore, [13C]-1, [13C]-2, [13C]-3, [13C]-4, and [13C]-6 are present and within the expected ratio windows relative to X or some other isotopolog. 
+            <span style="color: lightslategrey;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## X-13C-6 must be present with an intensity of at least intThres and it must have the same chroamtographic peak as X. <br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;## Furthermore, it must have a ratio relative to X-13C4 of at least 0.1 and maximum 0.8<br></span>
+            ]</code>
         </p>
         
-        <p>Note: CPExtract is designed to work with native samples and isotopically labeled tracers or with uniformly labeled organism that are fed with native tracer compouns. Thus, it also support negative isotopologs such as [13C]-2. </p>
+        
+        <p>The example matches the following isotopolog pattern (with an intensity deviation of up to 20%):
+            <br><img src="figures/example.png"><br>
+            X is the most abundant signal with at least an intensity of 1E5. Additionally, no signals are present for [<sup>13</sup>C]<sub>1</sub> and [<sup>13</sup>C]<sub>2</sub>. The signal that looks like it is a [<sup>13</sup>C]<sub>2</sub> isotopolog is from a different, co-eluting compounds with a distinct <i>m/z</i> offset. Furthermore, [<sup>13</sup>C]<sub>-1</sub>, [<sup>13</sup>C]<sub>-2</sub>, [<sup>13</sup>C]<sub>-3</sub>, [<sup>13</sup>C]<sub>-4</sub>, and [<sup>13</sup>C]<sub>-6</sub> are present and within the expected ratio windows relative to X or some other isotopolog. 
+        </p>
+        
+        <p>Note: CPExtract is designed to work with native samples and isotopically labeled tracers or with uniformly labeled organism that are fed with native tracer compouns. Thus, it also support negative isotopologs such as [<sup>13</sup>C]<sub>-2</sub>. </p>
         
         <p>Note: In most cases, CPExtract will not determine a meaningful number of carbon atoms or other elements used for labeling. Thus, during the annotation process the number of labeling isotopes should not be used and thus the parameter should be set to 'Don't use'</p>
     </div>
