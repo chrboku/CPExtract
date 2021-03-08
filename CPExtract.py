@@ -4898,7 +4898,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             for row in table:
                 features.add(row.Num)
-                if row.Ionisation_Mode=="-":
+                if row.IonMode=="-":
                     negMode.add(row.Num)
                 else:
                     posMode.add(row.Num)
@@ -4907,7 +4907,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 metabolites[row.OGroup].append(row.Num)
                 if row.OGroup not in metabolitesIonMode.keys():
                     metabolitesIonMode[row.OGroup]=set()
-                metabolitesIonMode[row.OGroup].add(row.Ionisation_Mode)
+                metabolitesIonMode[row.OGroup].add(row.IonMode)
 
             texts.append(" Features    %12d\n Metabolites %12d\n"%(len(features), len(metabolites)))
             texts.append("\n")
