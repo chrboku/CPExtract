@@ -133,7 +133,7 @@ class RunIdentification:
                  eicSmoothingWindow="None", eicSmoothingWindowSize=0, eicSmoothingPolynom=0, artificialMPshift_start=0, artificialMPshift_stop=0,
                  correctCCount=True, minCorrelation=0.85, minCorrelationConnections=0.4, hAIntensityError=5., hAMinScans=3, adducts=[],
                  elements=[], heteroAtoms=[], simplifyInSourceFragments=True, chromPeakFile=None, lock=None, queue=None, pID=-1, rVersion="NA",
-                 meVersion="NA", rules=[]):
+                 meVersion="NA", rules=""):
 
         self.labellingIsotopeA=labellingisotopeA
         self.labellingIsotopeB=labellingisotopeB
@@ -1056,7 +1056,7 @@ class RunIdentification:
                                     peakB=peak.foundMatches[iso]
                                     self.printMessage("    --> %s, RT %5.2f min, Area %12.1f (AreaRatio %8.3f%%, IntensityRatio %8.3f%%), Pearson correlation %6.3f, Artificial shift %4d" %
                                                       (iso, times[peakB.peakIndex] / 60., peakB.peakArea,100*peakB.peakArea/peak.peakArea, 100*peakB.peaksRatio, peakB.peaksCorr, peakB.artificialShift), type="warning")
-                                self.printMessage("Rules are "+str(RuleMatcher(rules, ppm=self.ppm).checkChromPeaks(peakAreas)).lower()+" using the peak areas")
+                                self.printMessage("Rules are "+str(RuleMatcher(rules, ppm=self.ppm).checkChromPeaks(peakAreas))+" using the peak areas")
 
         conn.commit()
         curs.close()
@@ -1464,6 +1464,9 @@ class RunIdentification:
             ######################################################################################
 
             self.printMessage("File: %s" % self.file, type="info")
+
+            exec(self.rules) in globals()
+            self.rules = rules
 
             self.postMessageToProgressWrapper("start")
             self.postMessageToProgressWrapper("max", 100.)

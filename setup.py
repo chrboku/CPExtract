@@ -220,14 +220,14 @@ print "########## Packing MetExtractII_Main"
 print "###################################################"
 setup(console=[c],
       options={"py2exe": {
-                 "includes": ["sip", "matplotlib.backends.backend_tkagg", 'scipy', 'scipy.integrate', 'scipy.special.*','scipy.linalg.*', 'scipy.sparse.csgraph._validation'],  # use this line if above does not work
+                 "includes": ["sip", "matplotlib.backends.backend_tkagg", 'scipy', 'scipy.integrate', 'scipy.special.*','scipy.linalg.*', 'scipy.sparse.csgraph._validation', 'scipy._lib.messagestream'],  # use this line if above does not work
                  "dll_excludes": ["MSVCP90.dll", "api-ms-win-core-string-l1-1-0.dll","api-ms-win-core-registry-l1-1-0.dll","api-ms-win-core-errorhandling-l1-1-0.dll","api-ms-win-core-string-l2-1-0.dll",
                                   "api-ms-win-core-profile-l1-1-0.dll","api-ms-win*.dll","api-ms-win-core-processthreads-l1-1-2.dll","api-ms-win-core-libraryloader-l1-2-1.dll","api-ms-win-core-file-l1-2-1.dll",
                                   "api-ms-win-security-base-l1-2-0.dll","api-ms-win-eventing-provider-l1-1-0.dll","api-ms-win-core-heap-l2-1-0.dll","api-ms-win-core-libraryloader-l1-2-0.dll","api-ms-win-core-localization-l1-2-1.dll",
                                   "api-ms-win-core-sysinfo-l1-1-0.dll","api-ms-win-core-synch-l1-2-0.dll","api-ms-win-core-heap-l1-2-0.dll","api-ms-win-core-handle-l1-1-0.dll","api-ms-win-core-io-l1-1-1.dll","api-ms-win-core-com-l1-1-1.dll",
                                   "api-ms-win-core-memory-l1-1-2.dll","api-ms-win-core-version-l1-1-1.dll","api-ms-win-core-version-l1-1-0.dll","api-ms-win-core-processthreads-l1-1-0.dll"],
                  "excludes": ["_gtkagg", "_tkagg", 'jinja2.asyncsupport','jinja2.asyncfilters'],
-                 "packages": ["FileDialog", "openpyxl", 'reportlab','reportlab.graphics.charts','reportlab.graphics.samples','reportlab.graphics.widgets','reportlab.graphics.barcode','reportlab.graphics','reportlab.lib','reportlab.pdfbase','reportlab.pdfgen','reportlab.platypus', 'zeep', 'lxml'],
+                 "packages": ["FileDialog", "openpyxl", 'reportlab','reportlab.graphics.charts','reportlab.graphics.samples','reportlab.graphics.widgets','reportlab.graphics.barcode','reportlab.graphics','reportlab.lib','reportlab.pdfbase','reportlab.pdfgen','reportlab.platypus', 'zeep', 'lxml', 'scipy'],
                  'dist_dir': "./dist"
       }},
       data_files=data_files,
@@ -323,53 +323,3 @@ if not err:
     except:
         print "Cleanup failed. dist and/or build directories still there\n==============================\n"
 
-
-os.makedirs("./BootstrapKnitr_Template")
-os.makedirs("./BootstrapKnitr_Template/dataIn")
-os.makedirs("./BootstrapKnitr_Template/dataOut")
-os.makedirs("./BootstrapKnitr_Template/figure")
-os.makedirs("./BootstrapKnitr_Template/documentation")
-os.makedirs("./BootstrapKnitr_Template/documentation/figures")
-os.makedirs("./BootstrapKnitr_Template/scripts")
-os.makedirs("./BootstrapKnitr_Template/scripts/templateScripts")
-os.makedirs("./BootstrapKnitr_Template/scripts/extLib")
-os.makedirs("./BootstrapKnitr_Template/scripts/js")
-
-copyAllFilesInFolder("./../BootstrapKnitr_Template", "./BootstrapKnitr_Template")
-copyAllFilesInFolder("./../BootstrapKnitr_Template/dataIn", "./BootstrapKnitr_Template/dataIn")
-copyAllFilesInFolder("./../BootstrapKnitr_Template/dataOut", "./BootstrapKnitr_Template/dataOut")
-copyAllFilesInFolder("./../BootstrapKnitr_Template/figure", "./BootstrapKnitr_Template/figure")
-copyAllFilesInFolder("./../BootstrapKnitr_Template/documentation", "./BootstrapKnitr_Template/documentation")
-copyAllFilesInFolder("./../BootstrapKnitr_Template/documentation/figures", "./BootstrapKnitr_Template/documentation/figures")
-copyAllFilesInFolder("./../BootstrapKnitr_Template/documentation/importantPackagesWithVersion", "./BootstrapKnitr_Template/documentation/importantPackagesWithVersion")
-copyAllFilesInFolder("./../BootstrapKnitr_Template/scripts/templateScripts", "./BootstrapKnitr_Template/scripts/templateScripts")
-copyAllFilesInFolder("./../BootstrapKnitr_Template/scripts/extLib", "./BootstrapKnitr_Template/scripts/extLib")
-copyAllFilesInFolder("./../BootstrapKnitr_Template/scripts/js", "./BootstrapKnitr_Template/scripts/js")
-
-zipF = zipfile.ZipFile("./distribute/BootstrapKnitr_Template.zip", 'w')
-zipdir("./BootstrapKnitr_Template", zipF)
-zipF.close()
-rmtree("./BootstrapKnitr_Template")
-
-print "BootstrapKnitr_Template zipped"
-
-copy("./../distribution/R-3.3.2-win.exe", "./distribute/R-3.3.2-win.exe")
-
-print "R 2.15.2 copied"
-
-copy("./../distribution/RStudio-0.97.551.exe", "./distribute/RStudio-0.97.551.exe")
-
-print "RStudio copied"
-
-copy ("./calculateIsotopeEnrichment.R", "./distribute/calcIsotopicEnrichment.R")
-
-print "calcIsotopicEnrichment.R copied"
-
-try:
-    rmtree("./dist/")
-except:
-    pass
-try:
-    rmtree("./build/")
-except:
-    pass

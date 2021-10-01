@@ -2125,6 +2125,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     self.rules = a[1]
                     logging.info(self.rulesString)
                     logging.info("New rules (above) will be used")
+                else:
+                    QtGui.QMessageBox.information(self, "CPExtract", "Rules are invalid: "+a[1], QtGui.QMessageBox.Ok)
 
 
 
@@ -2688,7 +2690,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             # start the multiprocessing
             res = p.imap_unordered(runFile, [
                 RunIdentification(files[i],
-                                  rules=self.rules,
+                                  rules=self.rulesString,
                                   exOperator=str(self.ui.exOperator_LineEdit.text()),
                                   exExperimentID=str(self.ui.exExperimentID_LineEdit.text()),
                                   exComments=str(self.ui.exComments_TextEdit.toPlainText()),
@@ -3031,7 +3033,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     shutil.copyfile(resFilePath + "/xxx_results__3_afterOmit.tsv.identified.sqlite", resFileFull + ".identified.sqlite")
 
                     runIdentificationInstance=RunIdentification(files[0],
-                                                                rules=self.rules,
+                                                                rules=self.rulesString,
                                                                 exOperator=str(self.ui.exOperator_LineEdit.text()),
                                                                 exExperimentID=str(self.ui.exExperimentID_LineEdit.text()),
                                                                 exComments=str(self.ui.exComments_TextEdit.toPlainText()),
@@ -4662,7 +4664,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
 
                         scale=1
-                        for ih in range(0, 32):
+                        for ih in range(self.ui.spinBox_minCplot.value(), self.ui.spinBox_maxCplot.value()):
                             mz = pi.mz + 1.00335484 * ih
                             peakID = scan.findMZ(mz, ppm=ppm)
                             if peakID[0] != -1:
@@ -4670,27 +4672,19 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                                     scale=scan.intensity_list[peakID[0]]
                                     break
                                 scale=max(scale, scan.intensity_list[peakID[0]])
-                            mz = pi.mz - 1.00335484 * ih
-                            peakID = scan.findMZ(mz, ppm=ppm)
-                            if peakID[0] != -1 and ih!=0:
-                                scale=max(scale, scan.intensity_list[peakID[0]])
 
 
                         self.ui.resultsExperiment_plot.axes.plot([t / 60. for t in times], [e/maxN for e in eic], color=group.color, label="M: %s"%(a))
 
 
                         self.ui.resultsExperimentMSScanPeaks_plot.axes.text(x=1*tj, y=-0.2, s=a, rotation=70, horizontalalignment='right', verticalalignment='top', color=group.color, backgroundcolor="white")
-                        for ih in range(0, 32):
+                        for ih in range(self.ui.spinBox_minCplot.value(), self.ui.spinBox_maxCplot.value()):
                             mz = pi.mz + 1.00335484 * ih
                             peakID = scan.findMZ(mz, ppm=ppm)
                             if peakID[0] != -1:
                                 if ih==0:
                                     scale=scan.intensity_list[peakID[0]]
                                 self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=1*tj+0.05*ih, ymin=0+0.01*ih, ymax=scan.intensity_list[peakID[0]]/scale+0.01*ih, color=group.color, linewidth=2.0 if ih!=0 else 6.0)
-                            mz = pi.mz - 1.00335484 * ih
-                            peakID = scan.findMZ(mz, ppm=ppm)
-                            if peakID[0] != -1 and ih!=0:
-                                self.ui.resultsExperimentMSScanPeaks_plot.axes.vlines(x=1*tj-0.05*ih, ymin=0-0.01*ih, ymax=scan.intensity_list[peakID[0]]/scale-0.01*ih, color=group.color, linewidth=2.0)
 
 
                         self.ui.resultsExperimentSeparatedPeaks_plot.axes.plot([t / 60. + grpInd for t in times if rtBorderMin<=t/60.<=rtBorderMax], [eic[j]/maxN for j in range(len(eic)) if rtBorderMin<=times[j]/60.<=rtBorderMax], color=group.color, label="M: %s"%(a))
@@ -4740,7 +4734,7 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                             if sc > 0:
                                 scale = sc
 
-                            for ih in range(-32, 32):
+                            for ih in range(self.ui.spinBox_minCplot.value(), self.ui.spinBox_maxCplot.value()):
 
                                 eic, times, scanIds, mzs=self.loadedMZXMLs[fi].getEIC(pi.mz + 1.00335484 * ih, ppm=ppm, filterLine=pi.scanEvent)
                                 eic = [e for j, e in enumerate(eic) if rtBorderMin <=times[j]/60.<=rtBorderMax]
@@ -5048,6 +5042,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     self.rules = a[1]
                     logging.info(w.getText())
                     logging.info("New rules (above) will be used")
+                else:
+                    QtGui.QMessageBox.information(self, "CPExtract", "Rules are invalid: " + a[1], QtGui.QMessageBox.Ok)
 
         except:
             import traceback
@@ -5272,6 +5268,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
             return (True, rules)
         except Exception as ex:
+            import traceback
+            traceback.print_exc()
             return (False, "General error: %s"%ex.message)
 
 
@@ -5369,8 +5367,9 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             '## An error in the code will deactivate the dialogbox. See documentation for further information',
             '#####################################',
             '',
-            'intThres=1E4',
+            'from matchIsotopologPatternRules import Rule',
             '',
+            'intThres=1E4',
             'rules = [',
             '    ## Signals, that must not be present',
             '    AbsenceRule(otherIsotopolog="[13C]1", maxRatio=0.1),',
@@ -5390,12 +5389,6 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.rulesString="\n".join(self.rulesString)
         a=self.generateRulesFromText(self.rulesString)
         self.rules=a[1]
-
-
-
-
-
-
 
 
 

@@ -20,7 +20,9 @@ from utils import getNormRatio
 from utils import Bunch
 from copy import deepcopy
 from matchIsotopologPatternRules import RuleMatcher
+from formulaTools import formulaTools
 
+_formulaTools=formulaTools()
 
 def getSubstitutionArray(purity, xMax, maxSub):
     ret = []
@@ -95,17 +97,7 @@ def matchPartners(mzXMLData, rules,
 
     detectedIonPairs = []
 
-    oriXOffset = xOffset
     oriCValidationOffset = cValidationOffset
-
-
-    # substitution arrays for checking the number of carbon atoms
-    maxSub=5
-    if len(xCounts)==0:
-        xCounts=[1,2,3]
-    purityNArray = getSubstitutionArray(purityN, max(xCounts)+1, maxSub)   # native metabolite
-    purityLArray = getSubstitutionArray(purityL, max(xCounts)+1, maxSub)   # labelled metabolite
-
 
     ruleMatcher=RuleMatcher(rules, ppm=ppm, log=False)
 
@@ -158,7 +150,6 @@ def matchPartners(mzXMLData, rules,
                                 if len(backIsos)>0:
                                     continue
 
-
                                 possibleLoadings=[]
                                 ## figure out possible loadings
                                 for l in range(maxLoading, 0, -1):
@@ -169,53 +160,30 @@ def matchPartners(mzXMLData, rules,
                                         possibleLoadings.append(l)
                                         break ## skip other loadings
 
-
-
                                 if len(possibleLoadings)==0:
                                     possibleLoadings=[1]
 
-
                                 for curLoading in possibleLoadings:
                                     if not skipOtherLoadings:
-                                        xOffset = oriXOffset / float(curLoading)
-                                        cValidationOffset = oriCValidationOffset / float(curLoading)
 
+                                        rulesValid, noNeedToCheckFurther, dynamicInfo = ruleMatcher.matchIsoPatternRules(curScan, currentPeakIndex, curLoading)
 
-                                        # labeling patters derived from small tracer compounds (e.g. 13C)
-                                        # Idea for the detection has been developed by Bernhard Seidl for the detecton of polyketides
-                                        #
-                                        # E.g. tracer is [13C]2
-                                        # |
-                                        # |
-                                        # |   |
-                                        # |   |   |
-                                        # | | |   |   |
-                                        # | | | | |   |   |
-                                        # | | | | | | | | |
-                                        #
-                                        # E.g. [13C]3D3
-                                        # |  <-- [13C]3D3 -->  |
-                                        # ||                  ||
-                                        # |||                ||||
-                                        #
-                                        # NOTE: these isotope patterns are strange
-                                        if useCIsotopePatternValidation == 3:
+                                        if rulesValid:
+                                            temp = ruleMatcher.getChromatographicPeaks()
+                                            for iso in dynamicInfo.split(";"):
+                                                temp[iso] =  Bunch(mzInc=_formulaTools.calcIsotopologOffsetWeight(_formulaTools.parseFormula(iso)), requiredChromPeak=True)
+                                            curPeakDetectedIonPairs.append(
+                                                mzFeature(mz=curPeakmz,
+                                                          similarityString=dynamicInfo,
+                                                          scanIndex=curScanIndex,
+                                                          loading=curLoading,
+                                                          nIntensity=curPeakIntensity,
+                                                          ionMode=ionMode,
 
-                                            rulesValid, noNeedToCheckFurther=ruleMatcher.matchIsoPatternRules(curScan, currentPeakIndex, curLoading)
+                                                          type="CP",
+                                                          otherIsotopologs = temp ))
 
-                                            if rulesValid:
-                                                curPeakDetectedIonPairs.append(
-                                                    mzFeature(mz=curPeakmz,
-                                                              similarityString="CP",
-                                                              scanIndex=curScanIndex,
-                                                              loading=curLoading,
-                                                              nIntensity=curPeakIntensity,
-                                                              ionMode=ionMode,
-
-                                                              type="CP",
-                                                              otherIsotopologs=ruleMatcher.getChromatographicPeaks()))
-
-                                                dontUsePeakIndices.extend(noNeedToCheckFurther)
+                                            dontUsePeakIndices.extend(noNeedToCheckFurther)
 
                             curScanDetectedIonPairs.extend(curPeakDetectedIonPairs)
 

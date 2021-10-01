@@ -6,14 +6,17 @@ import abc
 _formulaTools=formulaTools()
 
 class Rule:
+    def isStatic(self):
+        return True
+
     def getAllRequiredIsotopologs(self):
         return []
 
     def check(self, isotopologDict, log=False):
-        return False
+        return False  ## or return False, str for dynamic information
 
     def getChromatographicPeaks(self):
-        return []
+        return []  ## or return False, str for dynamic information
 
     @abc.abstractmethod
     def getMessage(self):
@@ -30,6 +33,8 @@ class PresenceRule(Rule):
         self.verifyChromPeakSimilarity=verifyChromPeakSimilarity
         self.ratioWindows=ratioWindows
 
+    def isStatic(self):
+        return True
 
     def getAllRequiredIsotopologs(self):
         return [self.otherIsotopolog] + self.ratioWindows.keys()
@@ -67,11 +72,91 @@ class PresenceRule(Rule):
 
 
 
+class RatioRule(Rule):
+    def __init__(self, numeratorA="[13C]2+X", denominatorA="[13C]1", numeratorB=None, denominatorB=None, ratio = 1.0, ratioWindowMultiplier=[0.666, 1.5], mustBePresent=True):
+        self.numeratorA = numeratorA
+        self.denominatorA = denominatorA
+        self.numeratorB = numeratorB
+        self.denominatorB = denominatorB
+        self.ratio = ratio
+        self.ratioWindowMultiplier = ratioWindowMultiplier
+        self.mustBePresent = mustBePresent
+
+    def isStatic(self):
+        return True
+
+    def getAllRequiredIsotopologs(self):
+        a = []
+        a.extend(self.numeratorA.split("+"))
+        a.extend(self.denominatorA.split("+"))
+        if self.numeratorB is not None:
+            a.extend(self.numeratorB.split("+"))
+        if self.denominatorB is not None:
+            a.extend(self.denominatorB.split("+"))
+        return a
+
+    def check(self, isotopologDict, log=False):
+        intNA = 0
+        intDA = 0
+
+        for iso in self.numeratorA.split("+"):
+            if iso in isotopologDict.keys():
+                intNA = intNA + isotopologDict[iso].intensity
+            elif self.mustBePresent: return False
+        for iso in self.denominatorA.split("+"):
+            if iso in isotopologDict.keys():
+                intDA = intDA + isotopologDict[iso].intensity
+            elif self.mustBePresent: return False
+
+        if intNA == 0 or intDA == 0:
+            return not self.mustBePresent
+
+        ratA = intNA / intDA
+
+        if self.numeratorB is not None and self.denominatorB is not None:
+            intNB = 0
+            intDB = 0
+
+            for iso in self.numeratorB.split("+"):
+                if iso in isotopologDict.keys():
+                    intNB = intNB + isotopologDict[iso].intensity
+                elif self.mustBePresent: return False
+            for iso in self.denominatorB.split("+"):
+                if iso in isotopologDict.keys():
+                    intDB = intDB + isotopologDict[iso].intensity
+                elif self.mustBePresent: return False
+
+            if intNB == 0 or intNB == 0:
+                return not self.mustBePresent
+
+            ratB = intNB / intDB
+        else:
+            ratB = self.ratio
+
+        return self.ratioWindowMultiplier[0] <= ratA/ratB <= self.ratioWindowMultiplier[1]
+
+    def getChromatographicPeaks(self):
+        return []
+
+    def getMessage(self):
+        if self.numeratorB is not None and self.denominatorB is not None:
+            return "Ratio test for (%s)/(%s) is (%s)/(%s) with allowed deviation of %.3f - %.3f"%(self.numeratorA, self.denominatorA, self.numeratorB, self.denominatorB, self.ratioWindowMultiplier[0], self.ratioWindowMultiplier[1])
+        return "Ratio test for (%s)/(%s) is %.3f with allowed deviation of %.3f - %.3f"%(self.numeratorA, self.denominatorA, self.ratio, self.ratioWindowMultiplier[0], self.ratioWindowMultiplier[1])
+
+
+
+
+
+
+
 
 class AbsenceRule(Rule):
     def __init__(self, otherIsotopolog="[13C]-1", maxRatio=0.1):
         self.otherIsotopolog=otherIsotopolog
         self.maxRatio=maxRatio
+
+    def isStatic(self):
+        return True
 
     def getAllRequiredIsotopologs(self):
         return [self.otherIsotopolog]
@@ -97,6 +182,9 @@ class AnyIntensityRule(Rule):
         self.anyIsotopolog=anyIsotopolog
         self.minimumIntensity=minimumIntensity
 
+    def isStatic(self):
+        return True
+
     def getAllRequiredIsotopologs(self):
         return self.anyIsotopolog
 
@@ -119,6 +207,9 @@ class AllIntensityRule(Rule):
         self.allIsotopolog=allIsotopolog
         self.minimumIntensity=minimumIntensity
 
+    def isStatic(self):
+        return True
+
     def getAllRequiredIsotopologs(self):
         return self.allIsotopolog
 
@@ -134,21 +225,6 @@ class AllIntensityRule(Rule):
 
     def getMessage(self):
         return "All isotopologs %s are below the set minimum intensity threshold (%.2f)"%(self.allIsotopolog, self.minimumIntensity)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -192,25 +268,37 @@ class RuleMatcher:
                     noNeedToCheckFurther.append(ind)
 
         rulesValid=True
+        dynamicInfo = []
         for rule in self.rules:
             if rulesValid:
-                ruleValid=rule.check(isotopologDict, log=self.log)
-                rulesValid=rulesValid and ruleValid
+                if rule.isStatic():
+                    temp = rulesValid and rule.check(isotopologDict, log=self.log)
+                else:
+                    temp, dynInfo = rule.check(isotopologDict, log=self.log)
+                    dynamicInfo.append(dynInfo)
+                rulesValid=rulesValid and temp
 
-        return rulesValid, noNeedToCheckFurther if rulesValid else []
+        return rulesValid, noNeedToCheckFurther if rulesValid else [], "Static" if len(dynamicInfo) == 0 else ";".join(dynamicInfo)
 
     def checkChromPeaks(self, peakAreas):
         rulesValid=True
+        dynamicInfo = []
         for rule in self.rules:
-            rulesValid=rulesValid and rule.check(peakAreas, log=self.log)
+            if rulesValid:
+                if rule.isStatic():
+                    temp = rule.check(peakAreas, log=self.log)
+                else:
+                    temp, dynInfo = rule.check(peakAreas, log=self.log)
+                    dynamicInfo.append(dynInfo)
+                rulesValid = rulesValid and temp
 
-        return rulesValid
+        return rulesValid, "Static" if len(dynamicInfo) == 0 else ";".join(dynamicInfo)
 
 
     def getChromatographicPeaks(self):
         chromPeaks={}
         for rule in self.rules:
             for iso in rule.getChromatographicPeaks():
-                chromPeaks[iso]= Bunch(mzInc=_formulaTools.calcIsotopologOffsetWeight(_formulaTools.parseFormula(iso)), requiredChromPeak=True)
+                chromPeaks[iso] = Bunch(mzInc=_formulaTools.calcIsotopologOffsetWeight(_formulaTools.parseFormula(iso)), requiredChromPeak=True)
 
         return chromPeaks
