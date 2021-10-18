@@ -130,6 +130,7 @@
         <ul>
             <li><strong>PresenceRule</strong><br>This rule tests, if a certain other isotopolog relative to X is present and if it is within a certain ratio relative to X or any other isotopolog<br></li>
             <li><strong>AbsenceRule</strong><br>This rule tests, if a certain isotopolog is not present or below a certain threshold relative to X</li>
+            <li><strong>RatioRule</strong><br>This rule tests, if certain isotopologs are within expected ratios relative to other isotopologs. </li>
             <li><strong>AnyIntensityRule</strong><br>This rule tests, if any of two or more isotopologs have at least a minimum intensity (signal abundance)</li>
             <li><strong>AllIntensityRule</strong><br>This rule tests, if all of two or more isotopologs have at least a minimum intensity (signal abundance)</li>
         </ul>
@@ -147,6 +148,15 @@
             <li><strong>otherIsotopolog</strong>: string, specifies the other isotopolog that must not be present</li>
             <li><strong>maxRatio</strong>: float, specifies the maximum allowed ratio of the other isotopolog (specified in the parameter otherIsotopolog)</li>
             <li>Note: it is recommended to not set the parameter maxRatio to 0. This would be a problem with noise signals that might have the same m/z value. A low value (e.g. 0.05 or 0.1) generally also works well and avoids problems with low-abundant noise signals</li>
+        </ul><br>
+        <p><strong>RatioRule</strong> checks if the intensity of a certain isotopolog relative to other isotopologs is within an expected ratio window. It is either tested if the ratio of two isotopologs (NA/DA) is approximately the provided parameter ratio and within the window ratioWindowMultiplier, or if the ratio of NA/DA and NB/DB is approximately the provided parameter ratio and within the winow ratioWindowMultiplier. The rule has the following parameters:</p>
+        <ul>
+            <li><strong>numeratorA</strong>: string, the first isotopolog (NA)</li>
+            <li><strong>denominatorA</strong>: string, the second isotopolog (DA) </li>
+            <li><strong>numeratorB</strong>: string, optionally the third isotopolog (NB)</li>
+            <li><strong>denominatorB</strong>: string, optionally the fourth isotopolog (DB)</li>
+            <li><strong>ratio</strong>: float, optionally the expected ratio</li>
+            <li><strong>ratioWindowMultiplier</strong>: [float, float], the expected ratio</li>
         </ul><br>
         <p><strong>AnyIntensityRule</strong> checks if at least one of several isotopologs has at least a minimum signal intensity. The rule has the following parameters:</p>
         <ul>
