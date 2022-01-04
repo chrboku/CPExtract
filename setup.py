@@ -86,7 +86,9 @@ def loadRConfFile(path):
 
 __RHOMEENVVAR=""
 import os
-from utils import get_main_dir
+def get_main_dir():
+    from utils import get_main_dir
+    return os.path.join(get_main_dir(), '')
 if "R_HOME" in os.environ.keys():
     __RHOMEENVVAR=os.environ["R_HOME"]
 

@@ -15,7 +15,7 @@ from reportlab.graphics import renderPDF
 
 from XICAlignment import XICAlignment
 
-from utils import ChromPeakFeature, getSubGraphs, Bunch, SQLInsert, natSort, get_main_dir, getSubGraphsFromDictDict, CallBackMethod
+from utils import ChromPeakFeature, getSubGraphs, Bunch, SQLInsert, natSort, getSubGraphsFromDictDict, CallBackMethod
 from runIdentification import ChromPeakFeature, getDBSuffix
 from TableUtils import TableUtils
 from MZHCA import HierarchicalClustering, cutTreeSized
@@ -35,6 +35,9 @@ from utils import mean, sd, corr
 
 import exportAsFeatureML
 
+def get_main_dir():
+    from utils import get_main_dir
+    return os.path.join(get_main_dir(), '')
 
 
 # HELPER METHOD for writing first page of PDF (unused)

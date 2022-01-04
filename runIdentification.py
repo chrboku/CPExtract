@@ -31,7 +31,7 @@ import numpy as np
 
 import HCA_general
 from utils import USEGRADIENTDESCENDPEAKPICKING
-from utils import getNormRatio, CallBackMethod, get_main_dir
+from utils import getNormRatio, CallBackMethod
 
 pp = pprint.PrettyPrinter(indent=1)
 
@@ -48,6 +48,10 @@ from reportlab.pdfgen import canvas
 from reportlab.graphics import renderPDF
 from reportlab.lib.styles import getSampleStyleSheet
 
+# make behavior os independent
+def get_main_dir():
+    from utils import get_main_dir
+    return os.path.join(get_main_dir(), '')
 
 # helper function for ReportLab
 def coord(x, y):

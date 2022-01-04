@@ -42,6 +42,11 @@ from utils import USEGRADIENTDESCENDPEAKPICKING
 
 from MetExtractII_Main import MetExtractVersion
 
+
+if not getattr(__builtins__, "WindowsError", None):
+    class WindowsError(OSError): pass
+
+
 # experiment types
 TRACER=object()
 METABOLOME=object()
@@ -75,7 +80,11 @@ def loadRConfFile(path):
 
 __RHOMEENVVAR=""
 import os
-from utils import get_main_dir
+# make behaviour os independent
+def get_main_dir():
+    from utils import get_main_dir
+    return os.path.join(get_main_dir(), '')
+
 if "R_HOME" in os.environ.keys():
     __RHOMEENVVAR=os.environ["R_HOME"]
 
@@ -119,7 +128,9 @@ if not loadRConfFile(path=get_main_dir()) or not checkR():
                                       "Do you want to specify the folder?",
                                       QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)==QtGui.QMessageBox.Yes:
                 tryLoad=True
-                from utils import get_main_dir
+                def get_main_dir():
+				    from utils import get_main_dir
+				    return os.path.join(get_main_dir(), '')
                 lastDir=get_main_dir()
                 while tryLoad:
                     folder = str(QtGui.QFileDialog.getExistingDirectory(None, "Select R-directory (not bin folder)", directory=lastDir))
@@ -436,7 +447,9 @@ class procAreaInFile:
     # initialise re-integration for one LC-HRMS file
     def __init__(self, forFile, chromPeakFile=None, offset=0):
         if chromPeakFile is None:
-            from utils import get_main_dir
+            def get_main_dir():
+			    from utils import get_main_dir
+			    return os.path.join(get_main_dir(), '')
             cpf = get_main_dir()+ "./chromPeakPicking/MassSpecWaveletIdentification.r"
             chromPeakFile=cpf
 
@@ -2552,8 +2565,8 @@ class mainWindow(QtGui.QMainWindow, Ui_MainWindow):
             "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, "\
             "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN "\
             "THE SOFTWARE."
-        QtGui.QMessageBox.information(self, "MetExtract",
-                                      "MetExtract %s\n\n(c) Centre for Analytical Chemistry, IFA Tulln\nUniversity of Natural Resources and Life Sciences, Vienna\n\n%s" % (MetExtractVersion, lic),
+        QtGui.QMessageBox.information(self, "CPExtract",
+                                      "CPExtract %s\n\n(c) Institute of Bioanalytics and Agro-Metabolomics, IFA Tulln\nUniversity of Natural Resources and Life Sciences, Vienna\n\n%s" % (MetExtractVersion, lic),
                                       QtGui.QMessageBox.Ok)
 
     # open local MetExtract documentation
