@@ -5856,6 +5856,7 @@ if __name__ == '__main__':
             rPackagesAvailable = True
 
     except:
+        import traceback
         traceback.print_exc()
         logging.info("  Error: R could not be loaded..")
     logging.info("")
