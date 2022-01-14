@@ -202,7 +202,7 @@ def checkRDependencies(r):
             dialog.setDependencyStatus(dep, RPackageAvailable)
         else:
             logging.info("installing %s.." % dep)
-            r("install.packages(\"%s\", repos='http://cran.us.r-project.org')" % dep)
+            r("install.packages(\"%s\", repos='https://cran.microsoft.com/snapshot/2019-10-04/')" % dep)
             if str(r("is.installed(\"%s\")" % dep)[0]).lower() == "true":
                 dialog.setDependencyStatus(dep, RPackageAvailable)
             else:
@@ -5856,6 +5856,7 @@ if __name__ == '__main__':
             rPackagesAvailable = True
 
     except:
+        traceback.print_exc()
         logging.info("  Error: R could not be loaded..")
     logging.info("")
 
